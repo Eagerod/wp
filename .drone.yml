@@ -1,0 +1,12 @@
+kind: pipeline
+name: default
+
+steps:
+  - name: test
+    image: golang:1.12
+    commands:
+      - make test
+  - name: build
+    image: golang:1.12
+    commands:
+      - make install
