@@ -11,7 +11,7 @@ BIN_NAME := $(BUILD_DIR)/$(EXECUTABLE)
 all: $(BIN_NAME)
 
 $(BIN_NAME): $(SOURCES)
-	mkdir -p $(BUILD_DIR)
+	@mkdir -p $(BUILD_DIR)
 	$(PREFIX) go build -o $(BIN_NAME) $(SOURCES)
 
 .PHONY: install
