@@ -37,6 +37,11 @@ coverage: test-cover
 pretty-coverage: test-cover
 	go tool cover -html=coverage.out
 
+.PHONY: fmt
+fmt:
+	@go fmt .
+	@go fmt ./cmd/wpservice
+
 .PHONY: clean
 clean:
 	rm -rf coverage.out $(BUILD_DIR)
