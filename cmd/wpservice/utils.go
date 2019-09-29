@@ -2,10 +2,16 @@ package wpservice;
 
 import (
     "errors"
+    "fmt"
     "image"
+    _ "image/gif"
+    _ "image/jpeg"
+    _ "image/png"
+    "math"
     "os"
     "os/exec"
     "path"
+    "path/filepath"
     "regexp"
     "strconv"
     "strings"
@@ -32,6 +38,10 @@ func ParseDimensionsString(str string) (image.Point, error) {
     return image.Pt(width, height), nil
 }
 
+/*
+  Run imagemagick against the provided source path and generate crops or
+  rescales of the image.
+*/
 func ExtractGravitiesFromSourceImage(
     sourcePath string,
     scaled bool,
@@ -85,4 +95,118 @@ func ExtractGravitiesFromSourceImage(
     }
 
     return errors
+}
+
+func ExtractFromLocalImage(intendedDimensions string, destination string, localPath string) error {
+    epsilon := math.Nextafter(1, 2) - 1
+
+    destinationDirComplete, err := filepath.Abs(path.Join(destination, intendedDimensions))
+    if err != nil {
+        return err
+    }
+
+    dirFilemode := os.ModeDir | 0755
+    if err := os.Mkdir(destinationDirComplete, dirFilemode); err != nil {
+        if !os.IsExist(err) {
+            return err
+        }
+    }
+
+    // Get provided image dimensions
+    sourceImage, err := os.Open(localPath)
+    if err != nil {
+        return err
+    }
+
+    image, _, err := image.Decode(sourceImage)
+    if err != nil {
+        return err
+    }
+
+    imageBoundingRect := image.Bounds()
+    imageOrigin := imageBoundingRect.Min
+    imageSize := imageBoundingRect.Max
+    if imageOrigin.X != 0 || imageOrigin.Y != 0 {
+        return errors.New("Don't know how to deal with non-origin-point images")
+    }
+
+    desiredSize, err := ParseDimensionsString(intendedDimensions)
+    if err != nil {
+        return err
+    }
+
+    if imageSize.X < desiredSize.X {
+        return errors.New("Image is not wide enough to produce quality output")
+    }
+
+    if imageSize.Y < desiredSize.Y {
+        return errors.New("Image is not tall enough to produce quality output")
+    }
+
+    // Check aspect ratio to know which direction scaled images will be
+    //   sliced.
+    // There will be a lot of duplicates without this step.
+    desiredAspectRatio := float64(imageSize.X) / float64(imageSize.Y)
+    imageAspectRatio := float64(desiredSize.X) / float64(desiredSize.Y)
+
+    var scaledGravities []string = nil
+    if math.Abs(desiredAspectRatio-imageAspectRatio) < epsilon {
+        scaledGravities = []string{
+            "Center",
+        }
+    } else if desiredAspectRatio > imageAspectRatio {
+        scaledGravities = []string{
+            "East",
+            "Center",
+            "West",
+        }
+    } else {
+        scaledGravities = []string{
+            "North",
+            "Center",
+            "South",
+        }
+    }
+
+    errs := ExtractGravitiesFromSourceImage(
+        localPath,
+        true,
+        scaledGravities,
+        intendedDimensions,
+        destinationDirComplete,
+    )
+
+    for err := range errs {
+        fmt.Fprintln(os.Stderr, err)
+    }
+
+    unscaledGravities := []string{
+        "North",
+        "NorthEast",
+        "East",
+        "SouthEast",
+        "South",
+        "SouthWest",
+        "West",
+        "NorthWest",
+        "Center",
+    }
+
+    errs2 := ExtractGravitiesFromSourceImage(
+        localPath,
+        false,
+        unscaledGravities,
+        intendedDimensions,
+        destinationDirComplete,
+    )
+
+    for err := range errs2 {
+        fmt.Fprintln(os.Stderr, err)
+    }
+
+    if len(errs) != 0 || len(errs2) != 0 {
+        return errors.New("Some export step failed. See above for more information")
+    }
+
+    return nil
 }
