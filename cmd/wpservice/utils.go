@@ -67,25 +67,20 @@ func ExtractGravitiesFromSourceImage(
           continue
         }
 
-        var cmd *exec.Cmd 
-        if scaled {
-            cmd = exec.Command(
-                "convert",
-                sourcePath,
-                "-gravity", gravity,
-                "-scale", dimensions + "^",
-                "-extent", dimensions,
-                outputPath,
-            )
-        } else {
-            cmd = exec.Command(
-                "convert",
-                sourcePath,
-                "-gravity", gravity,
-                "-extent", dimensions,
-                outputPath,
-            )
+        imagemagickArgs := []string{
+            sourcePath,
+            "-gravity", gravity,
+            "-extent", dimensions,
+            outputPath,
         }
+
+        if scaled {
+            scaledArgs := []string{"-scaled", dimensions + "^"}
+            args := append(imagemagickArgs[0:3], scaledArgs...)
+            imagemagickArgs = append(args, imagemagickArgs[3:]...)
+        }
+
+        cmd := exec.Command("convert", imagemagickArgs...)
 
         err := cmd.Run()
 
