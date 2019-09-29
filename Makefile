@@ -1,15 +1,17 @@
-SOURCES := main.go
+MAIN_FILE := main.go
 
 BUILD_DIR := build
 EXECUTABLE := wp
 BIN_NAME := $(BUILD_DIR)/$(EXECUTABLE)
 
+DEPS := $(shell find . -iname "*.go" -and -not -name "*_test.go")
+
 .PHONY: all
 all: $(BIN_NAME)
 
-$(BIN_NAME): $(SOURCES)
+$(BIN_NAME): $(DEPS)
 	@mkdir -p $(BUILD_DIR)
-	go build -o $(BIN_NAME) $(SOURCES)
+	go build -o $(BIN_NAME) $(MAIN_FILE)
 
 .PHONY: install
 install: $(BIN_NAME)
