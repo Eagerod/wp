@@ -10,3 +10,12 @@ steps:
     image: golang:1.12
     commands:
       - make install
+  - name: notify
+    image: plugins/slack
+    settings:
+      webhook:
+        from_secret: slack_hook
+      channel: ci
+    when:
+      status:
+        - failure
