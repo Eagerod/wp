@@ -27,10 +27,10 @@ system-test: install
 
 .PHONY: test-cover
 test-cover: 
-	go test -v --coverprofile=coverage.out 'wpservice'
+	go test -v --coverprofile=coverage.out ./cmd/wpservice
 
 .PHONY: coverage
-cover: test-cover
+coverage: test-cover
 	go tool cover -func=coverage.out
 
 .PHONY: pretty-coverage
