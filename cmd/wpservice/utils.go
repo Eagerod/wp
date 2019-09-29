@@ -176,7 +176,7 @@ func ExtractFromLocalImage(intendedDimensions string, destination string, localP
         destinationDirComplete,
     )
 
-    for err := range errs {
+    for _, err := range errs {
         fmt.Fprintln(os.Stderr, err)
     }
 
@@ -200,7 +200,7 @@ func ExtractFromLocalImage(intendedDimensions string, destination string, localP
         destinationDirComplete,
     )
 
-    for err := range errs2 {
+    for _, err := range errs2 {
         fmt.Fprintln(os.Stderr, err)
     }
 
