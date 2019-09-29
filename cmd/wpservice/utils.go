@@ -3,8 +3,12 @@ package wpservice;
 import (
     "errors"
     "image"
+    "os"
+    "os/exec"
+    "path"
     "regexp"
     "strconv"
+    "strings"
 )
 
 /*
@@ -26,4 +30,59 @@ func ParseDimensionsString(str string) (image.Point, error) {
     }
 
     return image.Pt(width, height), nil
+}
+
+func ExtractGravitiesFromSourceImage(
+    sourcePath string,
+    scaled bool,
+    gravities []string,
+    dimensions string,
+    output string,
+) []error {
+    sourceImageBasename := path.Base(sourcePath)
+    sourceImageExtension := path.Ext(sourcePath)
+    destImagePrefix := sourceImageBasename[:len(sourceImageBasename) - len(sourceImageExtension)]
+
+    var errors []error
+    for _, gravity := range gravities {
+        var outputFilename string
+        if scaled {
+            outputFilename = destImagePrefix + "_scaled_" + strings.ToLower(gravity) + sourceImageExtension
+        } else {
+            outputFilename = destImagePrefix + "_" + strings.ToLower(gravity) + sourceImageExtension
+        }
+        outputPath := path.Join(output, outputFilename)
+
+        if _, err := os.Stat(outputPath); err == nil {
+          continue
+        }
+
+        var cmd *exec.Cmd 
+        if scaled {
+            cmd = exec.Command(
+                "convert",
+                sourcePath,
+                "-gravity", gravity,
+                "-scale", dimensions + "^",
+                "-extent", dimensions,
+                outputPath,
+            )
+        } else {
+            cmd = exec.Command(
+                "convert",
+                sourcePath,
+                "-gravity", gravity,
+                "-extent", dimensions,
+                outputPath,
+            )
+        }
+
+        err := cmd.Run()
+
+        if err != nil {
+            errors = append(errors, err)
+        }
+    }
+
+    return errors
 }

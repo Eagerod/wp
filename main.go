@@ -11,10 +11,8 @@ import (
     _ "image/png"
     "math"
     "os"
-    "os/exec"
     "path"
     "path/filepath"
-    "strings"
 )
 
 import (
@@ -26,7 +24,6 @@ import (
 )
 
 func main() {
-    // dimensionsRegexp := regexp.MustCompile(`^(\d+)x(\d+)$`)
     epsilon := math.Nextafter(1, 2) - 1
 
     baseCommand := &cobra.Command{
@@ -63,28 +60,30 @@ func main() {
             }
 
             imageBoundingRect := image.Bounds()
-            if imageBoundingRect.Min.X != 0 || imageBoundingRect.Min.Y != 0 {
+            imageOrigin := imageBoundingRect.Min
+            imageSize := imageBoundingRect.Max
+            if imageOrigin.X != 0 || imageOrigin.Y != 0 {
                 return errors.New("Don't know how to deal with non-origin-point images")
             }
 
-            desiredBoundingRect, err := wpservice.ParseDimensionsString(desiredDimensions)
+            desiredSize, err := wpservice.ParseDimensionsString(desiredDimensions)
             if err != nil {
                 return err
             }
 
-            if imageBoundingRect.Max.X < desiredBoundingRect.X {
+            if imageSize.X < desiredSize.X {
                 return errors.New("Image is not wide enough to produce quality output")
             }
 
-            if imageBoundingRect.Max.Y < desiredBoundingRect.Y {
+            if imageSize.Y < desiredSize.Y {
                 return errors.New("Image is not tall enough to produce quality output")
             }
 
             // Check aspect ratio to know which direction scaled images will be
             //   sliced.
             // There will be a lot of duplicates without this step.
-            desiredAspectRatio := float64(imageBoundingRect.Max.X) / float64(imageBoundingRect.Max.Y)
-            imageAspectRatio := float64(desiredBoundingRect.X) / float64(desiredBoundingRect.Y)
+            desiredAspectRatio := float64(imageSize.X) / float64(imageSize.Y)
+            imageAspectRatio := float64(desiredSize.X) / float64(desiredSize.Y)
 
             var scaledGravities []string = nil
             if math.Abs(desiredAspectRatio - imageAspectRatio) < epsilon {
@@ -105,32 +104,16 @@ func main() {
                 }
             }
 
-            sourceImageBasename := path.Base(imagePath)
-            sourceImageExtension := path.Ext(imagePath)
-            destImagePrefix := sourceImageBasename[:len(sourceImageBasename) - len(sourceImageExtension)]
+            errs := wpservice.ExtractGravitiesFromSourceImage(
+                imagePath,
+                true,
+                scaledGravities,
+                desiredDimensions,
+                destinationDirComplete,
+            )
 
-            for _, gravity := range scaledGravities {
-                outputFilename := destImagePrefix + "_scaled_" + strings.ToLower(gravity) + sourceImageExtension
-                outputPath := path.Join(destinationDirComplete, outputFilename)
-
-                if _, err := os.Stat(outputPath); err == nil {
-                  continue
-                }
-
-                cmd := exec.Command(
-                    "convert", 
-                    imagePath,
-                    "-gravity", gravity,
-                    "-scale", desiredDimensions + "^",
-                    "-extent", desiredDimensions,
-                    outputPath,
-                )
-
-                err := cmd.Run()
-
-                if err != nil {
-                    fmt.Fprintln(os.Stderr, "Error creating", outputFilename, err)
-                }
+            for err := range errs {
+                fmt.Fprintln(os.Stderr, err)
             }
 
             unscaledGravities := []string{
@@ -145,28 +128,21 @@ func main() {
                 "Center",
             }
 
-            for _, gravity := range unscaledGravities {
-                outputFilename := destImagePrefix + "_" + strings.ToLower(gravity) + sourceImageExtension
-                outputPath := path.Join(destinationDirComplete, outputFilename)
+            errs2 := wpservice.ExtractGravitiesFromSourceImage(
+                imagePath,
+                false,
+                unscaledGravities,
+                desiredDimensions,
+                destinationDirComplete,
+            )
 
-                if _, err := os.Stat(outputPath); err == nil {
-                  continue
-                }
-
-                cmd := exec.Command(
-                    "convert", 
-                    imagePath,
-                    "-gravity", gravity,
-                    "-extent", desiredDimensions,
-                    outputPath,
-                )
-
-                err := cmd.Run()
-
-                if err != nil {
-                    fmt.Fprintln(os.Stderr, "Error creating", outputFilename, err)
-                }
+            for err := range errs2 {
+                fmt.Fprintln(os.Stderr, err)
             }
+
+            if len(errs) != 0 || len(errs2) != 0 {
+                return errors.New("Some export step failed. See above for more information")
+            }  
 
 			return nil
         },
