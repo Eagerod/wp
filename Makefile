@@ -1,7 +1,4 @@
-ENV_PREFIX := GOPATH=$$(pwd)/src
-PREFIX := $(ENV_PREFIX)
-
-SOURCES := src/main.go
+SOURCES := main.go
 
 BUILD_DIR := build
 EXECUTABLE := wp
@@ -12,7 +9,7 @@ all: $(BIN_NAME)
 
 $(BIN_NAME): $(SOURCES)
 	@mkdir -p $(BUILD_DIR)
-	$(PREFIX) go build -o $(BIN_NAME) $(SOURCES)
+	go build -o $(BIN_NAME) $(SOURCES)
 
 .PHONY: install
 install: $(BIN_NAME)
@@ -20,27 +17,24 @@ install: $(BIN_NAME)
 
 .PHONY: test
 test:
-	$(PREFIX) go test -v 'wpservice'
+	go test -v ./cmd/wpservice
 
 .PHONY: system-test
 system-test: install
-	$(PREFIX) go test -v src/main_test.go 
+	go test -v main_test.go 
 
 .PHONY: test-cover
 test-cover: 
-	$(PREFIX) go test -v --coverprofile=coverage.out 'wpservice'
+	go test -v --coverprofile=coverage.out 'wpservice'
 
 .PHONY: coverage
 cover: test-cover
-	$(PREFIX) go tool cover -func=coverage.out
+	go tool cover -func=coverage.out
 
 .PHONY: pretty-coverage
 pretty-coverage: test-cover
-	$(PREFIX) go tool cover -html=coverage.out
+	go tool cover -html=coverage.out
 
 .PHONY: clean
 clean:
-	rm coverage.out || true
-	rm -rf build || true
-	rm -rf $(DEPS_DIR) || true
-	rm $(BIN_NAME) || true
+	rm -rf coverage.out $(BUILD_DIR)

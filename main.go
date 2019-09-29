@@ -10,12 +10,10 @@ import (
     _ "image/jpeg"
     _ "image/png"
     "math"
-    "regexp"
     "os"
     "os/exec"
     "path"
     "path/filepath"
-    "strconv"
     "strings"
 )
 
@@ -23,8 +21,12 @@ import (
     "github.com/spf13/cobra"
 )
 
+import (
+    "gitea.internal.aleemhaji.com/aleem/wp/cmd/wpservice"
+)
+
 func main() {
-    dimensionsRegexp := regexp.MustCompile(`^(\d+)x(\d+)$`)
+    // dimensionsRegexp := regexp.MustCompile(`^(\d+)x(\d+)$`)
     epsilon := math.Nextafter(1, 2) - 1
 
     baseCommand := &cobra.Command{
@@ -36,12 +38,6 @@ func main() {
             desiredDimensions := args[0]
             destinationDir := args[1]
             imagePath := args[2]
-
-            desiredDimensionsMatch := dimensionsRegexp.FindStringSubmatch(desiredDimensions)
-
-            if desiredDimensionsMatch == nil {
-                return errors.New("DesiredDimensions must be in the form <w>x<h>")
-            }
 
             destinationDirComplete, err := filepath.Abs(path.Join(destinationDir, desiredDimensions))
             if err != nil {
@@ -71,21 +67,16 @@ func main() {
                 return errors.New("Don't know how to deal with non-origin-point images")
             }
 
-            desiredWidth, err := strconv.Atoi(desiredDimensionsMatch[1])
+            desiredBoundingRect, err := wpservice.ParseDimensionsString(desiredDimensions)
             if err != nil {
                 return err
             }
 
-            desiredHeight, err := strconv.Atoi(desiredDimensionsMatch[2])
-            if err != nil {
-                return err
-            }
-
-            if imageBoundingRect.Max.X < desiredWidth {
+            if imageBoundingRect.Max.X < desiredBoundingRect.X {
                 return errors.New("Image is not wide enough to produce quality output")
             }
 
-            if imageBoundingRect.Max.Y < desiredHeight {
+            if imageBoundingRect.Max.Y < desiredBoundingRect.Y {
                 return errors.New("Image is not tall enough to produce quality output")
             }
 
@@ -93,7 +84,7 @@ func main() {
             //   sliced.
             // There will be a lot of duplicates without this step.
             desiredAspectRatio := float64(imageBoundingRect.Max.X) / float64(imageBoundingRect.Max.Y)
-            imageAspectRatio := float64(desiredWidth) / float64(desiredHeight)
+            imageAspectRatio := float64(desiredBoundingRect.X) / float64(desiredBoundingRect.Y)
 
             var scaledGravities []string = nil
             if math.Abs(desiredAspectRatio - imageAspectRatio) < epsilon {
