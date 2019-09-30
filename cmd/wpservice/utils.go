@@ -54,12 +54,12 @@ func ExtractGravitiesFromSourceImage(
 	gravities []string,
 	dimensions string,
 	output string,
-) []error {
+) error {
 	sourceImageBasename := path.Base(sourcePath)
 	sourceImageExtension := path.Ext(sourcePath)
 	destImagePrefix := sourceImageBasename[:len(sourceImageBasename)-len(sourceImageExtension)]
 
-	var errors []error
+	var errs []error
 	for _, gravity := range gravities {
 		var outputFilename string
 		if scaled {
@@ -91,12 +91,17 @@ func ExtractGravitiesFromSourceImage(
 		output, err := cmd.CombinedOutput()
 
 		if err != nil {
-			fmt.Println(string(output))
-			errors = append(errors, err)
+			errs = append(errs, errors.New(string(output)))
+			errs = append(errs, err)
 		}
 	}
 
-	return errors
+	multiError := MultiErrorFromErrors(errs)
+	if multiError.Exists() {
+		return multiError
+	}
+
+	return nil
 }
 
 func ExtractFromLocalImage(intendedDimensions string, destination string, localPath string) error {
@@ -170,17 +175,13 @@ func ExtractFromLocalImage(intendedDimensions string, destination string, localP
 		}
 	}
 
-	errs := ExtractGravitiesFromSourceImage(
+	err1 := ExtractGravitiesFromSourceImage(
 		localPath,
 		true,
 		scaledGravities,
 		intendedDimensions,
 		destinationDirComplete,
 	)
-
-	for _, err := range errs {
-		fmt.Fprintln(os.Stderr, err)
-	}
 
 	unscaledGravities := []string{
 		"North",
@@ -194,7 +195,7 @@ func ExtractFromLocalImage(intendedDimensions string, destination string, localP
 		"Center",
 	}
 
-	errs2 := ExtractGravitiesFromSourceImage(
+	err2 := ExtractGravitiesFromSourceImage(
 		localPath,
 		false,
 		unscaledGravities,
@@ -202,12 +203,8 @@ func ExtractFromLocalImage(intendedDimensions string, destination string, localP
 		destinationDirComplete,
 	)
 
-	for _, err := range errs2 {
-		fmt.Fprintln(os.Stderr, err)
-	}
-
-	if len(errs) != 0 || len(errs2) != 0 {
-		return errors.New("Some export step failed. See above for more information")
+	if err1 != nil || err2 != nil {
+		return MultiErrorFromErrors([]error{err1, err2})
 	}
 
 	return nil
