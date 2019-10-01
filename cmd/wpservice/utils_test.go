@@ -37,3 +37,31 @@ func TestParseDimensionsStringInvalidHeight(t *testing.T) {
 	assert.Equal(t, point, image.ZP)
 	assert.Equal(t, err.Error(), "Provided height is not a valid positive integer")
 }
+
+func TestExtractGravitiesFromSourceImageScaled(t *testing.T) {
+	f := doImageMagick
+	defer func() {
+		doImageMagick = f
+	}()
+	
+	doImageMagick = func(args ...string) (string, error) {
+		assert.Equal(t, []string{"abc", "-gravity", "Center", "-scale", "64x64^", "-extent", "64x64", "images/abc_scaled_center"}, args)
+		return "", nil
+	}
+
+	ExtractGravitiesFromSourceImage("abc", true, []string{"Center"}, "64x64", "images")
+}
+
+func TestExtractGravitiesFromSourceImageUnscaled(t *testing.T) {
+	f := doImageMagick
+	defer func() {
+		doImageMagick = f
+	}()
+
+	doImageMagick = func(args ...string) (string, error) {
+		assert.Equal(t, []string{"abc", "-gravity", "Center", "-extent", "64x64", "images/abc_center"}, args)
+		return "", nil
+	}
+
+	ExtractGravitiesFromSourceImage("abc", false, []string{"Center"}, "64x64", "images")
+}

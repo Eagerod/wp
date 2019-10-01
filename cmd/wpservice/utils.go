@@ -17,9 +17,17 @@ import (
 	"strings"
 )
 
+type ImageMagickRunner func(args ...string) (string, error)
+
 const imagemagickBin string = "convert"
 
 var dimensionsRegexp *regexp.Regexp = regexp.MustCompile(`^(\d+)x(\d+)$`)
+
+var doImageMagick ImageMagickRunner = func(args ...string) (string, error) {
+	cmd := exec.Command(imagemagickBin, args...)
+	output, err := cmd.CombinedOutput()
+	return string(output), err
+}
 
 /*
   Parse a string in the form <x>x<y> and return a Point specifying the extents
@@ -86,12 +94,11 @@ func ExtractGravitiesFromSourceImage(
 		}
 
 		fmt.Fprintln(os.Stderr, outputPath)
-		cmd := exec.Command(imagemagickBin, imagemagickArgs...)
 
-		output, err := cmd.CombinedOutput()
+		output, err := doImageMagick(imagemagickArgs...)
 
 		if err != nil {
-			errs = append(errs, errors.New(string(output)))
+			errs = append(errs, errors.New(output))
 			errs = append(errs, err)
 		}
 	}
