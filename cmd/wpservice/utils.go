@@ -170,9 +170,9 @@ func ExtractFromLocalImage(intendedDimensions string, destination string, localP
 		}
 	} else if desiredAspectRatio > imageAspectRatio {
 		scaledGravities = []string{
-			"East",
-			"Center",
 			"West",
+			"Center",
+			"East",
 		}
 	} else {
 		scaledGravities = []string{

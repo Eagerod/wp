@@ -5,6 +5,7 @@ EXECUTABLE := wp
 BIN_NAME := $(BUILD_DIR)/$(EXECUTABLE)
 
 DEPS := $(shell find . -iname "*.go" -and -not -name "*_test.go")
+TEST_IMAGES := test_images/square.jpg test_images/wide.jpg test_images/tall.jpg
 
 .PHONY: all
 all: $(BIN_NAME)
@@ -18,7 +19,7 @@ install: $(BIN_NAME)
 	cp $(BIN_NAME) /usr/local/bin/$(EXECUTABLE)
 
 .PHONY: test
-test:
+test: $(TEST_IMAGES)
 	go test -v ./cmd/wpservice
 
 .PHONY: system-test
@@ -36,6 +37,18 @@ coverage: test-cover
 .PHONY: pretty-coverage
 pretty-coverage: test-cover
 	go tool cover -html=coverage.out
+
+test_images/square.jpg:
+	mkdir -p test_images
+	convert -size 128x128 xc:black $@
+
+test_images/wide.jpg:
+	mkdir -p test_images
+	convert -size 256x128 xc:black $@
+
+test_images/tall.jpg:
+	mkdir -p test_images
+	convert -size 128x256 xc:black $@
 
 .PHONY: fmt
 fmt:

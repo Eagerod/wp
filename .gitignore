@@ -2,3 +2,4 @@ build
 src/pkg
 images
 coverage.out
+test_images
