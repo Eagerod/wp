@@ -1,15 +1,59 @@
+_:
+  - &docker_credentials
+    username: aleem
+    password:
+      from_secret: docker_registry
+  - &cached_volumes
+    - name: docker
+      path: /var/lib/docker
+    - name: go
+      path: /go
+  - &linux_amd64_environment
+    GOOS: linux
+    GOARCH: amd64
+
 kind: pipeline
 name: default
 
+# Build and push a test image before using it in the next step to actually run
+#   the tests.
 steps:
+  - name: prepare
+    image: busybox
+    commands:
+      - mkdir -p /cache/docker cache/go
+    volumes:
+      - name: cache
+        path: /cache
+
+  - name: create-test-image
+    image: plugins/docker
+    settings:
+      repo: registry.internal.aleemhaji.com/test-container
+      tags: latest
+      dockerfile: TestDockerfile
+      registry: registry.internal.aleemhaji.com
+      <<: *docker_credentials
+    volumes: *cached_volumes
+
   - name: test
-    image: golang:1.12
+    image: registry.internal.aleemhaji.com/test-container:latest
+    pull: false
     commands:
       - make test system-test
+    volumes: *cached_volumes
+    environment:
+      <<: *linux_amd64_environment
+
   - name: build
-    image: golang:1.12
+    image: registry.internal.aleemhaji.com/test-container:latest
+    pull: false
     commands:
       - make install
+    volumes: *cached_volumes
+    environment:
+      <<: *linux_amd64_environment
+
   - name: notify
     image: plugins/slack
     settings:
@@ -19,3 +63,17 @@ steps:
     when:
       status:
         - failure
+
+volumes:
+  - name: cache
+    host:
+      path: /var/cache
+  - name: docker
+    host:
+      path: /var/cache/docker
+  - name: go
+    host:
+      path: /var/cache/go
+
+image_pull_secrets:
+  - dockerconfigjson
