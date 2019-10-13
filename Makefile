@@ -4,13 +4,13 @@ BUILD_DIR := build
 EXECUTABLE := wp
 BIN_NAME := $(BUILD_DIR)/$(EXECUTABLE)
 
-DEPS := $(shell find . -iname "*.go" -and -not -name "*_test.go")
+SRC := $(shell find . -iname "*.go" -and -not -name "*_test.go")
 TEST_IMAGES := test_images/square.jpg test_images/wide.jpg test_images/tall.jpg
 
 .PHONY: all
 all: $(BIN_NAME)
 
-$(BIN_NAME): $(DEPS)
+$(BIN_NAME): $(SRC)
 	@mkdir -p $(BUILD_DIR)
 	go build -o $(BIN_NAME) $(MAIN_FILE)
 

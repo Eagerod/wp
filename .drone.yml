@@ -7,7 +7,7 @@ _:
     - name: docker
       path: /var/lib/docker
     - name: go
-      path: /go
+      path: /go-cache
   - &linux_amd64_environment
     GOOS: linux
     GOARCH: amd64
@@ -21,6 +21,7 @@ steps:
   - name: prepare
     image: busybox
     commands:
+      - echo "${DRONE_RUNNER_HOSTNAME}"
       - mkdir -p /cache/docker cache/go
     volumes:
       - name: cache
@@ -40,7 +41,9 @@ steps:
     image: registry.internal.aleemhaji.com/test-container:latest
     pull: false
     commands:
+      - cp -r /go-cache/* /go/
       - make test system-test
+      - rm -rf /go-cache/* && cp -r /go/* /go-cache/
     volumes: *cached_volumes
     environment:
       <<: *linux_amd64_environment
