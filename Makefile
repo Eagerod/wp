@@ -23,7 +23,7 @@ test: $(TEST_IMAGES)
 	go test -v ./cmd/wpservice
 
 .PHONY: system-test
-system-test: install
+system-test: install $(TEST_IMAGES)
 	go test -v main_test.go 
 
 .PHONY: test-cover

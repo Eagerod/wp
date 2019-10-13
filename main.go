@@ -23,22 +23,30 @@ func main() {
 		Use:   "wp <DesiredDimensions> <DestinationDir> <ImagePath> [ImagePath...] ",
 		Short: "Wallpaper Generator CLI",
 		Long:  "Create many different slices of an image passed in",
-		Args:  cobra.ExactArgs(3),
+		Args:  cobra.MinimumNArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			desiredDimensions := args[0]
 			destinationDir := args[1]
-			imagePath := args[2]
+			imagePaths := args[2:]
 
-			err := wpservice.ExtractFromLocalImage(desiredDimensions, destinationDir, imagePath)
+			var errs []error
+			for _, imagePath := range imagePaths {
+				err := wpservice.ExtractFromLocalImage(desiredDimensions, destinationDir, imagePath)
+
+				if err != nil {
+					errs = append(errs, err)
+				}
+			}
 
 			// If the only thing the error is is a series of soft errors, don't
 			//   exit with failure.
-			if err != nil {
-				if softErrorRegexp.FindStringSubmatch(err.Error()) == nil {
-					return err
+			multiError := wpservice.MultiErrorFromErrors(errs)
+			if multiError.Exists() {
+				if softErrorRegexp.FindStringSubmatch(multiError.Error()) == nil {
+					return multiError
 				}
 
-				fmt.Fprintln(os.Stderr, err.Error())
+				fmt.Fprintln(os.Stderr, multiError.Error())
 			}
 
 			return nil
