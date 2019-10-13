@@ -79,13 +79,18 @@ func TestExtractFromLocalImageSameAspectRatio(t *testing.T) {
 		doImageMagick = f
 	}()
 
-	cwd, _ := os.Getwd()
-	sourceImage, _ := filepath.Abs(path.Join(cwd, "..", "..", "test_images", "square.jpg"))
+	cwd, err := os.Getwd()
+	assert.NoError(t, err)
 
-	tempDir, _ := ioutil.TempDir("", "test_output/square")
+	sourceImage, err := filepath.Abs(path.Join(cwd, "..", "..", "test_images", "square.jpg"))
+	assert.NoError(t, err)
+
+	tempDir, err := ioutil.TempDir("", "")
+	assert.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
-	outputDir, _ := filepath.Abs(path.Join(tempDir, "64x64"))
+	outputDir, err := filepath.Abs(path.Join(tempDir, "64x64"))
+	assert.NoError(t, err)
 
 	expectedCalls := [][]string{
 		[]string{sourceImage, "-gravity", "Center", "-scale", "64x64^", "-extent", "64x64", path.Join(outputDir, "square_scaled_center.jpg")},
@@ -112,7 +117,7 @@ func TestExtractFromLocalImageSameAspectRatio(t *testing.T) {
 		return "", nil
 	}
 
-	err := ExtractFromLocalImage("64x64", tempDir, sourceImage)
+	err = ExtractFromLocalImage("64x64", tempDir, sourceImage)
 	assert.NoError(t, err)
 
 	assert.Equal(t, 0, len(expectedCalls))
@@ -124,10 +129,14 @@ func TestExtractFromLocalImageWideAspectRatio(t *testing.T) {
 		doImageMagick = f
 	}()
 
-	cwd, _ := os.Getwd()
-	sourceImage, _ := filepath.Abs(path.Join(cwd, "..", "..", "test_images", "wide.jpg"))
+	cwd, err := os.Getwd()
+	assert.NoError(t, err)
 
-	tempDir, _ := ioutil.TempDir("", "test_output/wide")
+	sourceImage, err := filepath.Abs(path.Join(cwd, "..", "..", "test_images", "wide.jpg"))
+	assert.NoError(t, err)
+
+	tempDir, err := ioutil.TempDir("", "")
+	assert.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
 	outputDir, _ := filepath.Abs(path.Join(tempDir, "64x64"))
@@ -159,7 +168,7 @@ func TestExtractFromLocalImageWideAspectRatio(t *testing.T) {
 		return "", nil
 	}
 
-	err := ExtractFromLocalImage("64x64", tempDir, sourceImage)
+	err = ExtractFromLocalImage("64x64", tempDir, sourceImage)
 	assert.NoError(t, err)
 
 	assert.Equal(t, 0, len(expectedCalls))
@@ -171,13 +180,18 @@ func TestExtractFromLocalImageTallAspectRatio(t *testing.T) {
 		doImageMagick = f
 	}()
 
-	cwd, _ := os.Getwd()
-	sourceImage, _ := filepath.Abs(path.Join(cwd, "..", "..", "test_images", "tall.jpg"))
+	cwd, err := os.Getwd()
+	assert.NoError(t, err)
+	
+	sourceImage, err := filepath.Abs(path.Join(cwd, "..", "..", "test_images", "tall.jpg"))
+	assert.NoError(t, err)
 
-	tempDir, _ := ioutil.TempDir("", "test_output/tall")
+	tempDir, err := ioutil.TempDir("", "")
+	assert.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
-	outputDir, _ := filepath.Abs(path.Join(tempDir, "64x64"))
+	outputDir, err := filepath.Abs(path.Join(tempDir, "64x64"))
+	assert.NoError(t, err)
 
 	expectedCalls := [][]string{
 		[]string{sourceImage, "-gravity", "North", "-scale", "64x64^", "-extent", "64x64", path.Join(outputDir, "tall_scaled_north.jpg")},
@@ -206,7 +220,7 @@ func TestExtractFromLocalImageTallAspectRatio(t *testing.T) {
 		return "", nil
 	}
 
-	err := ExtractFromLocalImage("64x64", tempDir, sourceImage)
+	err = ExtractFromLocalImage("64x64", tempDir, sourceImage)
 	assert.NoError(t, err)
 
 	assert.Equal(t, 0, len(expectedCalls))
