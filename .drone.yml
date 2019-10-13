@@ -22,6 +22,7 @@ steps:
     image: busybox
     commands:
       - echo "${DRONE_RUNNER_HOSTNAME}"
+      - if [ "${DRONE_RUNNER_HOSTNAME}" == "util2" ]; then echo "util2 disabled for performance reasons" && exit 1; fi
       - mkdir -p /cache/docker cache/go
     volumes:
       - name: cache
