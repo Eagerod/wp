@@ -182,7 +182,7 @@ func TestExtractFromLocalImageTallAspectRatio(t *testing.T) {
 
 	cwd, err := os.Getwd()
 	assert.NoError(t, err)
-	
+
 	sourceImage, err := filepath.Abs(path.Join(cwd, "..", "..", "test_images", "tall.jpg"))
 	assert.NoError(t, err)
 
@@ -224,4 +224,91 @@ func TestExtractFromLocalImageTallAspectRatio(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, 0, len(expectedCalls))
+}
+
+func TestExtractFromImageLocal(t *testing.T) {
+	f := doImageMagick
+	defer func() {
+		doImageMagick = f
+	}()
+
+	cwd, err := os.Getwd()
+	assert.NoError(t, err)
+
+	sourceImage, err := filepath.Abs(path.Join(cwd, "..", "..", "test_images", "tall.jpg"))
+	assert.NoError(t, err)
+
+	tempDir, err := ioutil.TempDir("", "")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	doImageMagick = func(args ...string) (string, error) {
+		return "", nil
+	}
+
+	err = ExtractFromImage("64x64", tempDir, sourceImage)
+	assert.NoError(t, err)
+}
+
+func TestExtractFromImageUsingFileProtocol(t *testing.T) {
+	f := doImageMagick
+	defer func() {
+		doImageMagick = f
+	}()
+
+	cwd, err := os.Getwd()
+	assert.NoError(t, err)
+
+	sourceImage, err := filepath.Abs(path.Join(cwd, "..", "..", "test_images", "tall.jpg"))
+	assert.NoError(t, err)
+
+	tempDir, err := ioutil.TempDir("", "")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	doImageMagick = func(args ...string) (string, error) {
+		return "", nil
+	}
+
+	err = ExtractFromImage("64x64", tempDir, "file://"+sourceImage)
+	assert.NoError(t, err)
+}
+
+func TestExtractFromImageUsingRemoteFile(t *testing.T) {
+	f := doImageMagick
+	defer func() {
+		doImageMagick = f
+	}()
+
+	g := downloadFile
+	defer func() {
+		downloadFile = g
+	}()
+
+	cwd, err := os.Getwd()
+	assert.NoError(t, err)
+
+	sourceImage, err := filepath.Abs(path.Join(cwd, "..", "..", "test_images", "tall.jpg"))
+	assert.NoError(t, err)
+
+	tempDir, err := ioutil.TempDir("", "")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	doImageMagick = func(args ...string) (string, error) {
+		return "", nil
+	}
+
+	downloadFile = func(dest, url string) error {
+		input, err := ioutil.ReadFile(sourceImage)
+		assert.NoError(t, err)
+
+		err = ioutil.WriteFile(dest, input, 0644)
+		assert.NoError(t, err)
+		return nil
+	}
+
+	// Download file is mocked, so url can be invalid
+	err = ExtractFromImage("64x64", tempDir, "http://"+sourceImage)
+	assert.NoError(t, err)
 }

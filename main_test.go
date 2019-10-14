@@ -51,7 +51,7 @@ func TestOneImage(t *testing.T) {
 
 	expectedOutput := ""
 	for _, str := range filenameSuffixes {
-		expectedOutput += path.Join(tempDir, "128x128", "square_" + str) + ".jpg\n"
+		expectedOutput += path.Join(tempDir, "128x128", "square_"+str) + ".jpg\n"
 	}
 
 	assert.Equal(t, expectedOutput, string(output))
@@ -66,8 +66,8 @@ func TestOneImageDimensionError(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	cmd := exec.Command("wp", "1024x1024", tempDir, sourceImage)
-    
-    err = cmd.Start()
+
+	err = cmd.Start()
 	assert.NoError(t, err)
 
 	err = cmd.Wait()
@@ -100,7 +100,7 @@ func TestMultipleImages(t *testing.T) {
 		"scaled_east",
 	}
 
-	bothFilenameSuffixes := []string {
+	bothFilenameSuffixes := []string{
 		"north",
 		"northeast",
 		"east",
@@ -114,11 +114,11 @@ func TestMultipleImages(t *testing.T) {
 
 	expectedOutput := ""
 	for _, str := range append(tallFilenameSuffixes, bothFilenameSuffixes...) {
-		expectedOutput += path.Join(tempDir, "128x128", "tall_" + str) + ".jpg\n"
+		expectedOutput += path.Join(tempDir, "128x128", "tall_"+str) + ".jpg\n"
 	}
 
 	for _, str := range append(wideFilenameSuffixes, bothFilenameSuffixes...) {
-		expectedOutput += path.Join(tempDir, "128x128", "wide_" + str) + ".jpg\n"
+		expectedOutput += path.Join(tempDir, "128x128", "wide_"+str) + ".jpg\n"
 	}
 
 	assert.Equal(t, expectedOutput, string(output))

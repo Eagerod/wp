@@ -7,7 +7,11 @@ import (
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
+	"io"
+	"io/ioutil"
 	"math"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -18,6 +22,7 @@ import (
 )
 
 type ImageMagickRunner func(args ...string) (string, error)
+type FileDownloader func(destFile, sourceUrl string) error
 
 const imagemagickBin string = "convert"
 
@@ -27,6 +32,24 @@ var doImageMagick ImageMagickRunner = func(args ...string) (string, error) {
 	cmd := exec.Command(imagemagickBin, args...)
 	output, err := cmd.CombinedOutput()
 	return string(output), err
+}
+
+// Ripped from https://golangcode.com/download-a-file-from-a-url
+var downloadFile FileDownloader = func(destFile, sourceUrl string) error {
+	resp, err := http.Get(sourceUrl)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	out, err := os.Create(destFile)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, resp.Body)
+	return err
 }
 
 /*
@@ -215,4 +238,37 @@ func ExtractFromLocalImage(intendedDimensions string, destination string, localP
 	}
 
 	return nil
+}
+
+func ExtractFromImage(intendedDimensions string, destination string, sourcePath string) error {
+	// If the passed in string has a protocol at the beginning, download the
+	//   image to temporary storage, run the regular process, then delete the
+	//   original.
+	pathUrl, err := url.Parse(sourcePath)
+	if err != nil {
+		return err
+	}
+
+	if pathUrl.Scheme == "file" {
+		return ExtractFromLocalImage(intendedDimensions, destination, pathUrl.Path)
+	}
+
+	if pathUrl.Scheme == "" {
+		return ExtractFromLocalImage(intendedDimensions, destination, sourcePath)
+	}
+
+	tempDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		return err
+	}
+
+	defer os.RemoveAll(tempDir)
+	destPath := path.Join(tempDir, path.Base(sourcePath))
+
+	err = downloadFile(destPath, sourcePath)
+	if err != nil {
+		return err
+	}
+
+	return ExtractFromLocalImage(intendedDimensions, destination, destPath)
 }

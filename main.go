@@ -31,7 +31,7 @@ func main() {
 
 			var errs []error
 			for _, imagePath := range imagePaths {
-				err := wpservice.ExtractFromLocalImage(desiredDimensions, destinationDir, imagePath)
+				err := wpservice.ExtractFromImage(desiredDimensions, destinationDir, imagePath)
 
 				if err != nil {
 					errs = append(errs, err)
