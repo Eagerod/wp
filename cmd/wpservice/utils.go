@@ -150,11 +150,11 @@ func ExtractFromLocalImage(intendedDimensions string, destination string, localP
 	}
 
 	if imageSize.X < desiredSize.X {
-		return errors.New("Image is not wide enough to produce quality output")
+		return errors.New(fmt.Sprintf("Image (%s) is not wide enough to produce quality output", path.Base(localPath)))
 	}
 
 	if imageSize.Y < desiredSize.Y {
-		return errors.New("Image is not tall enough to produce quality output")
+		return errors.New(fmt.Sprintf("Image (%s) is not tall enough to produce quality output", path.Base(localPath)))
 	}
 
 	// Check aspect ratio to know which direction scaled images will be

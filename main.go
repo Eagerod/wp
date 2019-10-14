@@ -16,7 +16,7 @@ import (
 	"gitea.internal.aleemhaji.com/aleem/wp/cmd/wpservice"
 )
 
-var softErrorRegexp *regexp.Regexp = regexp.MustCompile(`^(?:Image is not (?:tall|wide) enough to produce quality output\n?)+$`)
+var softErrorRegexp *regexp.Regexp = regexp.MustCompile(`^(?:Image .*? is not (?:tall|wide) enough to produce quality output\n?)+$`)
 
 func main() {
 	baseCommand := &cobra.Command{

@@ -57,6 +57,23 @@ func TestOneImage(t *testing.T) {
 	assert.Equal(t, expectedOutput, string(output))
 }
 
+func TestOneImageDimensionError(t *testing.T) {
+	cwd, _ := os.Getwd()
+	sourceImage, _ := filepath.Abs(path.Join(cwd, "test_images", "square.jpg"))
+
+	tempDir, err := ioutil.TempDir("", "")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	cmd := exec.Command("wp", "1024x1024", tempDir, sourceImage)
+    
+    err = cmd.Start()
+	assert.NoError(t, err)
+
+	err = cmd.Wait()
+	assert.NoError(t, err)
+}
+
 func TestMultipleImages(t *testing.T) {
 	cwd, _ := os.Getwd()
 	sourceImage1, _ := filepath.Abs(path.Join(cwd, "test_images", "tall.jpg"))
