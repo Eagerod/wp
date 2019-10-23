@@ -18,11 +18,19 @@ name: default
 # Build and push a test image before using it in the next step to actually run
 #   the tests.
 steps:
-  - name: prepare
+  - name: test-node
     image: busybox
     commands:
       - echo "${DRONE_RUNNER_HOSTNAME}"
-      - if [ "${DRONE_RUNNER_HOSTNAME}" == "util2" ]; then echo "util2 disabled for performance reasons" && exit 1; fi
+      - |
+        if [ "${DRONE_RUNNER_HOSTNAME}" == "util2" ]; then 
+            echo "util2 disabled for performance reasons"
+            exit 1 
+        fi
+
+  - name: prepare-cache
+    image: busybox
+    commands:
       - mkdir -p /cache/docker cache/go
     volumes:
       - name: cache
@@ -37,6 +45,9 @@ steps:
       registry: registry.internal.aleemhaji.com
       <<: *docker_credentials
     volumes: *cached_volumes
+    when:
+      branch:
+        - master
 
   - name: test
     image: registry.internal.aleemhaji.com/test-container:latest
