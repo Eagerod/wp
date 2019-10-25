@@ -17,7 +17,6 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 )
 
@@ -27,6 +26,33 @@ type FileDownloader func(destFile, sourceUrl string) error
 const imagemagickBin string = "convert"
 
 var dimensionsRegexp *regexp.Regexp = regexp.MustCompile(`^(\d+)x(\d+)$`)
+var epsilon float64 = math.Nextafter(1, 2) - 1
+
+// Gravity sets:
+var equalAspectRatioGravities []string = []string{
+	"Center",
+}
+var tallAspectRatioGravities []string = []string{
+	"North",
+	"Center",
+	"South",
+}
+var wideAspectRatioGravities []string = []string{
+	"West",
+	"Center",
+	"East",
+}
+var unscaledGravities []string = []string{
+	"North",
+	"NorthEast",
+	"East",
+	"SouthEast",
+	"South",
+	"SouthWest",
+	"West",
+	"NorthWest",
+	"Center",
+}
 
 var doImageMagick ImageMagickRunner = func(args ...string) (string, error) {
 	cmd := exec.Command(imagemagickBin, args...)
@@ -52,55 +78,110 @@ var downloadFile FileDownloader = func(destFile, sourceUrl string) error {
 	return err
 }
 
-/*
-  Parse a string in the form <x>x<y> and return a Point specifying the extents
-*/
-func ParseDimensionsString(str string) (image.Point, error) {
-	dimensionsMatch := dimensionsRegexp.FindStringSubmatch(str)
-
-	if len(dimensionsMatch) == 0 {
-		return image.ZP, errors.New(fmt.Sprintf("Provided dimension string (%s) is not valid", str))
+// Get the dimensions of an image at the path passed in.
+func GetImageDimensions(imagePath string) (image.Point, error) {
+	sourceImage, err := os.Open(imagePath)
+	if err != nil {
+		return image.ZP, err
 	}
 
-	width, err := strconv.Atoi(dimensionsMatch[1])
-	if err != nil || width <= 0 {
-		return image.ZP, errors.New("Provided width is not a valid positive integer")
+	img, _, err := image.Decode(sourceImage)
+	if err != nil {
+		return image.ZP, err
 	}
 
-	height, err := strconv.Atoi(dimensionsMatch[2])
-	if err != nil || height <= 0 {
-		return image.ZP, errors.New("Provided height is not a valid positive integer")
+	imageBoundingRect := img.Bounds()
+	imageOrigin := imageBoundingRect.Min
+	imageSize := imageBoundingRect.Max
+	if imageOrigin.X != 0 || imageOrigin.Y != 0 {
+		return image.ZP, errors.New("Don't know how to deal with non-origin-point images")
 	}
 
-	return image.Pt(width, height), nil
+	return imageSize, nil
+}
+
+// Get the final output filename of writing an image with the given parameters.
+func GetOutputFilename(outputDir string, gravity string, scaled bool, sourcePath string) string {
+	sourceImageBasename := path.Base(sourcePath)
+	sourceImageExtension := path.Ext(sourcePath)
+	destImagePrefix := sourceImageBasename[:len(sourceImageBasename)-len(sourceImageExtension)]
+
+	var outputFilename string
+	if scaled {
+		outputFilename = destImagePrefix + "_scaled_" + strings.ToLower(gravity) + sourceImageExtension
+	} else {
+		outputFilename = destImagePrefix + "_" + strings.ToLower(gravity) + sourceImageExtension
+	}
+	return path.Join(outputDir, outputFilename)
+}
+
+// mkdir -p
+func osMkdirp(p string, mode os.FileMode) error {
+	// dirFilemode := os.ModeDir | mode
+	if err := os.Mkdir(p, mode); err != nil {
+		if !os.IsExist(err) {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// Take the provided source path, and make a temporary copy of it that can be
+//   fed through imagemagick repeatedly.
+// The returned path will be within a temporary directory that must be deleted
+//   by the caller
+func PrepareImageFromSource(sourcePath string) (string, error) {
+	tempDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		return "", err
+	}
+
+	destPath := path.Join(tempDir, path.Base(sourcePath))
+
+	pathUrl, err := url.Parse(sourcePath)
+	if err != nil {
+		return "", err
+	}
+
+	if pathUrl.Scheme == "file" || pathUrl.Scheme == "" {
+		source, err := os.Open(pathUrl.Path)
+		if err != nil {
+			return "", err
+		}
+		defer source.Close()
+
+		destination, err := os.Create(destPath)
+		if err != nil {
+			return "", err
+		}
+		defer destination.Close()
+
+		_, err = io.Copy(destination, source)
+	} else {
+		err = downloadFile(destPath, sourcePath)
+	}
+
+	return destPath, err
 }
 
 /*
   Run imagemagick against the provided source path and generate crops or
   rescales of the image.
 */
-func ExtractGravitiesFromSourceImage(
+func ExtractGravitiesFromLocalImage(
 	sourcePath string,
 	scaled bool,
 	gravities []string,
 	dimensions string,
 	output string,
 ) error {
-	sourceImageBasename := path.Base(sourcePath)
-	sourceImageExtension := path.Ext(sourcePath)
-	destImagePrefix := sourceImageBasename[:len(sourceImageBasename)-len(sourceImageExtension)]
-
 	var errs []error
 	for _, gravity := range gravities {
-		var outputFilename string
-		if scaled {
-			outputFilename = destImagePrefix + "_scaled_" + strings.ToLower(gravity) + sourceImageExtension
-		} else {
-			outputFilename = destImagePrefix + "_" + strings.ToLower(gravity) + sourceImageExtension
-		}
-		outputPath := path.Join(output, outputFilename)
+		outputPath := GetOutputFilename(output, gravity, scaled, sourcePath)
 
 		if _, err := os.Stat(outputPath); err == nil {
+			fmt.Fprintln(os.Stderr, outputPath)
 			continue
 		}
 
@@ -126,48 +207,22 @@ func ExtractGravitiesFromSourceImage(
 		}
 	}
 
-	multiError := MultiErrorFromErrors(errs)
-	if multiError.Exists() {
-		return multiError
+	if err := MultiErrorFromErrors(errs); err.Exists() {
+		return err
 	}
 
 	return nil
 }
 
 func ExtractFromLocalImage(intendedDimensions string, destination string, localPath string) error {
-	epsilon := math.Nextafter(1, 2) - 1
-
-	destinationDirComplete, err := filepath.Abs(path.Join(destination, intendedDimensions))
-	if err != nil {
-		return err
-	}
-
-	dirFilemode := os.ModeDir | 0755
-	if err := os.Mkdir(destinationDirComplete, dirFilemode); err != nil {
-		if !os.IsExist(err) {
-			return err
-		}
-	}
-
-	// Get provided image dimensions
-	sourceImage, err := os.Open(localPath)
-	if err != nil {
-		return err
-	}
-
-	image, _, err := image.Decode(sourceImage)
-	if err != nil {
-		return err
-	}
-
-	imageBoundingRect := image.Bounds()
-	imageOrigin := imageBoundingRect.Min
-	imageSize := imageBoundingRect.Max
-	if imageOrigin.X != 0 || imageOrigin.Y != 0 {
-		return errors.New("Don't know how to deal with non-origin-point images")
-	}
-
+	// Check to make sure the passed in output dimensions are valid before
+	//   creating the directory.
 	desiredSize, err := ParseDimensionsString(intendedDimensions)
+	if err != nil {
+		return err
+	}
+
+	imageSize, err := GetImageDimensions(localPath)
 	if err != nil {
 		return err
 	}
@@ -180,6 +235,15 @@ func ExtractFromLocalImage(intendedDimensions string, destination string, localP
 		return errors.New(fmt.Sprintf("Image (%s) is not tall enough to produce quality output", path.Base(localPath)))
 	}
 
+	destinationDirComplete, err := filepath.Abs(path.Join(destination, intendedDimensions))
+	if err != nil {
+		return err
+	}
+
+	if err := osMkdirp(destinationDirComplete, 0755); err != nil {
+		return err
+	}
+
 	// Check aspect ratio to know which direction scaled images will be
 	//   sliced.
 	// There will be a lot of duplicates without this step.
@@ -188,24 +252,14 @@ func ExtractFromLocalImage(intendedDimensions string, destination string, localP
 
 	var scaledGravities []string = nil
 	if math.Abs(desiredAspectRatio-imageAspectRatio) < epsilon {
-		scaledGravities = []string{
-			"Center",
-		}
+		scaledGravities = equalAspectRatioGravities
 	} else if desiredAspectRatio > imageAspectRatio {
-		scaledGravities = []string{
-			"West",
-			"Center",
-			"East",
-		}
+		scaledGravities = wideAspectRatioGravities
 	} else {
-		scaledGravities = []string{
-			"North",
-			"Center",
-			"South",
-		}
+		scaledGravities = tallAspectRatioGravities
 	}
 
-	err1 := ExtractGravitiesFromSourceImage(
+	err1 := ExtractGravitiesFromLocalImage(
 		localPath,
 		true,
 		scaledGravities,
@@ -213,19 +267,7 @@ func ExtractFromLocalImage(intendedDimensions string, destination string, localP
 		destinationDirComplete,
 	)
 
-	unscaledGravities := []string{
-		"North",
-		"NorthEast",
-		"East",
-		"SouthEast",
-		"South",
-		"SouthWest",
-		"West",
-		"NorthWest",
-		"Center",
-	}
-
-	err2 := ExtractGravitiesFromSourceImage(
+	err2 := ExtractGravitiesFromLocalImage(
 		localPath,
 		false,
 		unscaledGravities,
@@ -233,42 +275,19 @@ func ExtractFromLocalImage(intendedDimensions string, destination string, localP
 		destinationDirComplete,
 	)
 
-	if err1 != nil || err2 != nil {
-		return MultiErrorFromErrors([]error{err1, err2})
+	if err := MultiErrorFromErrors([]error{err1, err2}); err.Exists() {
+		return err
 	}
 
 	return nil
 }
 
 func ExtractFromImage(intendedDimensions string, destination string, sourcePath string) error {
-	// If the passed in string has a protocol at the beginning, download the
-	//   image to temporary storage, run the regular process, then delete the
-	//   original.
-	pathUrl, err := url.Parse(sourcePath)
+	tempImage, err := PrepareImageFromSource(sourcePath)
 	if err != nil {
 		return err
 	}
+	defer os.RemoveAll(path.Base(tempImage))
 
-	if pathUrl.Scheme == "file" {
-		return ExtractFromLocalImage(intendedDimensions, destination, pathUrl.Path)
-	}
-
-	if pathUrl.Scheme == "" {
-		return ExtractFromLocalImage(intendedDimensions, destination, sourcePath)
-	}
-
-	tempDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		return err
-	}
-
-	defer os.RemoveAll(tempDir)
-	destPath := path.Join(tempDir, path.Base(sourcePath))
-
-	err = downloadFile(destPath, sourcePath)
-	if err != nil {
-		return err
-	}
-
-	return ExtractFromLocalImage(intendedDimensions, destination, destPath)
+	return ExtractFromLocalImage(intendedDimensions, destination, tempImage)
 }

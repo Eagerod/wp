@@ -14,36 +14,81 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestParseDimensionsStringValid(t *testing.T) {
-	point, err := ParseDimensionsString("1024x768")
-
+func TestGetImageDimensions(t *testing.T) {
+	cwd, _ := os.Getwd()
+	sourceImage, err := filepath.Abs(path.Join(cwd, "..", "..", "test_images", "square.jpg"))
 	assert.NoError(t, err)
-	assert.Equal(t, point.X, 1024)
-	assert.Equal(t, point.Y, 768)
+
+	dims, err := GetImageDimensions(sourceImage)
+	assert.NoError(t, err)
+
+	assert.Equal(t, dims, image.Point{128, 128})
 }
 
-func TestParseDimensionsStringInvalid(t *testing.T) {
-	point, err := ParseDimensionsString("3D")
+func TestGetImageDimensionsNotFound(t *testing.T) {
+	cwd, _ := os.Getwd()
+	sourceImage, err := filepath.Abs(path.Join(cwd, "..", "..", "test_images", "not-an-image.jpg"))
+	assert.NoError(t, err)
 
-	assert.Equal(t, point, image.ZP)
-	assert.Equal(t, err.Error(), "Provided dimension string (3D) is not valid")
+	dims, err := GetImageDimensions(sourceImage)
+	assert.Equal(t, image.ZP, dims)
+
+	e, ok := err.(*os.PathError)
+	assert.True(t, ok)
+	assert.NotNil(t, e)
+	assert.True(t, os.IsNotExist(e))
 }
 
-func TestParseDimensionsStringInvalidWidth(t *testing.T) {
-	point, err := ParseDimensionsString("0x768")
+func TestGetImageDimensionsNotImage(t *testing.T) {
+	cwd, _ := os.Getwd()
+	sourceImage, err := filepath.Abs(path.Join(cwd, "..", "..", "test_images"))
+	assert.NoError(t, err)
 
-	assert.Equal(t, point, image.ZP)
-	assert.Equal(t, err.Error(), "Provided width is not a valid positive integer")
+	dims, err := GetImageDimensions(sourceImage)
+	assert.Equal(t, image.ZP, dims)
+
+	assert.Equal(t, image.ErrFormat, err)
 }
 
-func TestParseDimensionsStringInvalidHeight(t *testing.T) {
-	point, err := ParseDimensionsString("1024x0")
+func TestGetOutputFilename(t *testing.T) {
+	p := GetOutputFilename("/some/path", "north", false, "image.jpg")
+	assert.Equal(t, "/some/path/image_north.jpg", p)
 
-	assert.Equal(t, point, image.ZP)
-	assert.Equal(t, err.Error(), "Provided height is not a valid positive integer")
+	p = GetOutputFilename("./some/path", "south", true, "image.png")
+	assert.Equal(t, "some/path/image_scaled_south.png", p)
 }
 
-func TestExtractGravitiesFromSourceImageScaled(t *testing.T) {
+func TestOsMkdirp(t *testing.T) {
+	d, err := ioutil.TempDir("", "")
+	assert.NoError(t, err)
+	defer os.RemoveAll(d)
+
+	mkdirp := path.Join(d, "new-dir")
+
+	err = osMkdirp(mkdirp, 0755)
+	assert.NoError(t, err)
+
+	s, err := os.Stat(mkdirp)
+	assert.NoError(t, err)
+
+	var flm os.FileMode = os.ModeDir | 0755
+
+	assert.True(t, s.IsDir())
+	assert.Equal(t, flm, s.Mode())
+}
+
+func TestOsMkdirpFailsTooNested(t *testing.T) {
+	d, err := ioutil.TempDir("", "")
+	assert.NoError(t, err)
+	defer os.RemoveAll(d)
+
+	mkdirp := path.Join(d, "new-dir", "cant-dir")
+
+	err = osMkdirp(mkdirp, 0755)
+	assert.True(t, os.IsNotExist(err))
+}
+
+func TestExtractGravitiesFromLocalImageScaled(t *testing.T) {
 	f := doImageMagick
 	defer func() {
 		doImageMagick = f
@@ -54,11 +99,11 @@ func TestExtractGravitiesFromSourceImageScaled(t *testing.T) {
 		return "", nil
 	}
 
-	err := ExtractGravitiesFromSourceImage("abc", true, []string{"Center"}, "64x64", "images")
+	err := ExtractGravitiesFromLocalImage("abc", true, []string{"Center"}, "64x64", "images")
 	assert.NoError(t, err)
 }
 
-func TestExtractGravitiesFromSourceImageUnscaled(t *testing.T) {
+func TestExtractGravitiesFromLocalImageUnscaled(t *testing.T) {
 	f := doImageMagick
 	defer func() {
 		doImageMagick = f
@@ -69,7 +114,7 @@ func TestExtractGravitiesFromSourceImageUnscaled(t *testing.T) {
 		return "", nil
 	}
 
-	err := ExtractGravitiesFromSourceImage("abc", false, []string{"Center"}, "64x64", "images")
+	err := ExtractGravitiesFromLocalImage("abc", false, []string{"Center"}, "64x64", "images")
 	assert.NoError(t, err)
 }
 
