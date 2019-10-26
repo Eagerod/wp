@@ -21,9 +21,14 @@ func TestHelpExecutes(t *testing.T) {
 
 	_, err = cmd.CombinedOutput()
 	assert.NoError(t, err)
+
+	cmd = exec.Command("wp", "extract", "--help")
+
+	_, err = cmd.CombinedOutput()
+	assert.NoError(t, err)
 }
 
-func TestOneImage(t *testing.T) {
+func TestExtractOneImage(t *testing.T) {
 	cwd, _ := os.Getwd()
 	sourceImage, _ := filepath.Abs(path.Join(cwd, "test_images", "square.jpg"))
 
@@ -31,7 +36,7 @@ func TestOneImage(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
-	cmd := exec.Command("wp", "128x128", tempDir, sourceImage)
+	cmd := exec.Command("wp", "extract", "128x128", tempDir, sourceImage)
 
 	output, err := cmd.CombinedOutput()
 	assert.NoError(t, err)
@@ -57,7 +62,7 @@ func TestOneImage(t *testing.T) {
 	assert.Equal(t, expectedOutput, string(output))
 }
 
-func TestOneImageDimensionError(t *testing.T) {
+func TestExtractOneImageDimensionError(t *testing.T) {
 	cwd, _ := os.Getwd()
 	sourceImage, _ := filepath.Abs(path.Join(cwd, "test_images", "square.jpg"))
 
@@ -65,7 +70,7 @@ func TestOneImageDimensionError(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
-	cmd := exec.Command("wp", "1024x1024", tempDir, sourceImage)
+	cmd := exec.Command("wp", "extract", "1024x1024", tempDir, sourceImage)
 
 	err = cmd.Start()
 	assert.NoError(t, err)
@@ -74,7 +79,7 @@ func TestOneImageDimensionError(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestMultipleImages(t *testing.T) {
+func TestExtractMultipleImages(t *testing.T) {
 	cwd, _ := os.Getwd()
 	sourceImage1, _ := filepath.Abs(path.Join(cwd, "test_images", "tall.jpg"))
 	sourceImage2, _ := filepath.Abs(path.Join(cwd, "test_images", "wide.jpg"))
@@ -83,7 +88,7 @@ func TestMultipleImages(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
-	cmd := exec.Command("wp", "128x128", tempDir, sourceImage1, sourceImage2)
+	cmd := exec.Command("wp", "extract", "128x128", tempDir, sourceImage1, sourceImage2)
 
 	output, err := cmd.CombinedOutput()
 	assert.NoError(t, err)
@@ -119,6 +124,56 @@ func TestMultipleImages(t *testing.T) {
 
 	for _, str := range append(wideFilenameSuffixes, bothFilenameSuffixes...) {
 		expectedOutput += path.Join(tempDir, "128x128", "wide_"+str) + ".jpg\n"
+	}
+
+	assert.Equal(t, expectedOutput, string(output))
+}
+
+func TestPickImage(t *testing.T) {
+	cwd, _ := os.Getwd()
+	sourceImage, _ := filepath.Abs(path.Join(cwd, "test_images", "square.jpg"))
+
+	tempDir, err := ioutil.TempDir("", "")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	cmd := exec.Command("wp", "pick", "128x128", tempDir, "north", sourceImage)
+
+	output, err := cmd.CombinedOutput()
+	assert.NoError(t, err)
+
+	filenameSuffixes := []string{
+		"north",
+	}
+
+	expectedOutput := ""
+	for _, str := range filenameSuffixes {
+		expectedOutput += path.Join(tempDir, "128x128", "square_"+str) + ".jpg\n"
+	}
+
+	assert.Equal(t, expectedOutput, string(output))
+}
+
+func TestPickImageScaled(t *testing.T) {
+	cwd, _ := os.Getwd()
+	sourceImage, _ := filepath.Abs(path.Join(cwd, "test_images", "square.jpg"))
+
+	tempDir, err := ioutil.TempDir("", "")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	cmd := exec.Command("wp", "pick", "128x128", tempDir, "north", "--scaled", sourceImage)
+
+	output, err := cmd.CombinedOutput()
+	assert.NoError(t, err)
+
+	filenameSuffixes := []string{
+		"scaled_north",
+	}
+
+	expectedOutput := ""
+	for _, str := range filenameSuffixes {
+		expectedOutput += path.Join(tempDir, "128x128", "square_"+str) + ".jpg\n"
 	}
 
 	assert.Equal(t, expectedOutput, string(output))

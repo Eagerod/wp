@@ -291,3 +291,18 @@ func ExtractFromImage(intendedDimensions string, destination string, sourcePath 
 
 	return ExtractFromLocalImage(intendedDimensions, destination, tempImage)
 }
+
+func PickFromImage(intendedDimensions string, destination string, sourcePath string, scaled bool, gravity string) error {
+	tempImage, err := PrepareImageFromSource(sourcePath)
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(path.Base(tempImage))
+
+	destination = path.Join(destination, intendedDimensions)
+	if err := osMkdirp(destination, 0755); err != nil {
+		return err
+	}
+
+	return ExtractGravitiesFromLocalImage(tempImage, scaled, []string{gravity}, intendedDimensions, destination)
+}
