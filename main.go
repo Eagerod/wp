@@ -29,6 +29,9 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			if printVersionFlag {
 				fmt.Println("wp: " + wpservice.VersionBuild)
+			} else {
+	            cmd.Help()
+	            os.Exit(1)
 			}
 
 			return
