@@ -4,7 +4,7 @@ BUILD_DIR := build
 EXECUTABLE := wp
 BIN_NAME := $(BUILD_DIR)/$(EXECUTABLE)
 
-SRC := $(shell find . -iname "*.go" -and -not -name "*_test.go")
+SRC := $(shell find . -iname "*.go" -and -not -name "*_test.go") cmd/wpservice/version.go
 TEST_IMAGES := test_images/square.jpg test_images/wide.jpg test_images/tall.jpg
 
 .PHONY: all
@@ -33,6 +33,17 @@ test-cover:
 .PHONY: coverage
 coverage: test-cover
 	go tool cover -func=coverage.out
+
+.INTERMEDIATE: cmd/wpservice/version.go
+cmd/wpservice/version.go:
+	version=$$(cat VERSION) && \
+	build=$$(git rev-parse --short HEAD && if [ ! -z "$$(git diff)" ]; then echo "- dirty"; fi) && \
+	printf \
+		"%s\n\n%s\n%s\n\n%s\n" \
+		"package wpservice" \
+		"const Version string = \"v$$(printf '%s' $$version)\"" \
+		"const Build string = \"$$(printf '%s' $$build)\"" \
+		"const VersionBuild string = Version + \"-\" + Build" > $@
 
 .PHONY: pretty-coverage
 pretty-coverage: test-cover

@@ -1,4 +1,6 @@
 _:
+  - test_container: &test_container_name registry.internal.aleemhaji.com/test-container
+    test_container_tagged: &test_container_tagged registry.internal.aleemhaji.com/test-container:latest
   - &docker_credentials
     username: aleem
     password:
@@ -11,6 +13,11 @@ _:
   - &linux_amd64_environment
     GOOS: linux
     GOARCH: amd64
+  - &blobstore_credentials
+    BLOBSTORE_URL: 
+      from_secret: blobstore_url
+    BLOBSTORE_WRITE_ACL:
+      from_secret: blobstore_write_acl
 
 kind: pipeline
 name: default
@@ -39,7 +46,7 @@ steps:
   - name: create-test-image
     image: plugins/docker
     settings:
-      repo: registry.internal.aleemhaji.com/test-container
+      repo: *test_container_name
       tags: latest
       dockerfile: TestDockerfile
       registry: registry.internal.aleemhaji.com
@@ -50,7 +57,7 @@ steps:
         - master
 
   - name: test
-    image: registry.internal.aleemhaji.com/test-container:latest
+    image: *test_container_tagged
     pull: false
     commands:
       - cp -r /go-cache/* /go/
@@ -61,13 +68,43 @@ steps:
       <<: *linux_amd64_environment
 
   - name: build
-    image: registry.internal.aleemhaji.com/test-container:latest
+    image: *test_container_tagged
     pull: false
     commands:
       - make install
     volumes: *cached_volumes
     environment:
       <<: *linux_amd64_environment
+
+  - name: publish-linux-amd64-version
+    image: *test_container_tagged
+    commands:
+      - make clean
+      - make
+      - "curl -fsSL -X POST -H \"X-Blobstore-Write-Acl: $${BLOBSTORE_WRITE_ACL}\" --data-binary @build/wp $${BLOBSTORE_URL}/$${GOOS}-$${GOARCH}/latest/wp"
+      - "curl -fsSL -X POST -H \"X-Blobstore-Write-Acl: $${BLOBSTORE_WRITE_ACL}\" --data-binary @build/wp $${BLOBSTORE_URL}/$${GOOS}-$${GOARCH}/${DRONE_TAG}/wp"
+    environment:
+      GOOS: linux
+      GOARCH: amd64
+      <<: *blobstore_credentials
+    when:
+      event:
+        - tag
+
+  - name: publish-darwin-amd64-version
+    image: *test_container_tagged
+    commands:
+      - make clean
+      - make
+      - "curl -fsSL -X POST -H \"X-Blobstore-Write-Acl: $${BLOBSTORE_WRITE_ACL}\" --data-binary @build/wp $${BLOBSTORE_URL}/$${GOOS}-$${GOARCH}/latest/wp"
+      - "curl -fsSL -X POST -H \"X-Blobstore-Write-Acl: $${BLOBSTORE_WRITE_ACL}\" --data-binary @build/wp $${BLOBSTORE_URL}/$${GOOS}-$${GOARCH}/${DRONE_TAG}/wp"
+    environment:
+      GOOS: darwin
+      GOARCH: amd64
+      <<: *blobstore_credentials
+    when:
+      event:
+        - tag
 
   - name: notify
     image: plugins/slack

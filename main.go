@@ -19,16 +19,24 @@ import (
 var softErrorRegexp *regexp.Regexp = regexp.MustCompile(`^(?:Image .*? is not (?:tall|wide) enough to produce quality output\n?)+$`)
 
 func main() {
-	var scaledFlag bool 
+	var scaledFlag bool
+	var printVersionFlag bool
 
 	baseCommand := &cobra.Command{
 		Use:   "wp",
 		Short: "Wallpaper Generator CLI",
 		Long:  "Manipulate images for use as desktop wallpapers",
+		Run: func(cmd *cobra.Command, args []string) {
+			if printVersionFlag {
+				fmt.Println("wp: " + wpservice.VersionBuild)
+			}
+
+			return
+		},
 	}
 
 	extractCommand := &cobra.Command{
-		Use: "extract desired_dimensions destination_dir image_path [image_path...]",
+		Use:   "extract desired_dimensions destination_dir image_path [image_path...]",
 		Short: "Extract image slices",
 		Long:  "Create many different slices of an image passed in",
 		Args:  cobra.MinimumNArgs(3),
@@ -86,10 +94,12 @@ func main() {
 		},
 	}
 
-    baseCommand.AddCommand(extractCommand)
-    baseCommand.AddCommand(pickCommand)
+	baseCommand.AddCommand(extractCommand)
+	baseCommand.AddCommand(pickCommand)
 
-    pickCommand.Flags().BoolVarP(&scaledFlag, "scaled", "", false, "Scale the image to the desired dimensions, rather than maintaining scale")
+	baseCommand.Flags().BoolVarP(&printVersionFlag, "version", "v", false, "Print the application version and exit")
+
+	pickCommand.Flags().BoolVarP(&scaledFlag, "scaled", "", false, "Scale the image to the desired dimensions, rather than maintaining scale")
 
 	if err := baseCommand.Execute(); err != nil {
 		os.Exit(1)
