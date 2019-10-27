@@ -23,12 +23,12 @@ func main() {
 	var printVersionFlag bool
 
 	baseCommand := &cobra.Command{
-		Use:   "wp",
+		Use:   os.Args[0],
 		Short: "Wallpaper Generator CLI",
 		Long:  "Manipulate images for use as desktop wallpapers",
 		Run: func(cmd *cobra.Command, args []string) {
 			if printVersionFlag {
-				fmt.Println("wp: " + wpservice.VersionBuild)
+				fmt.Println(os.Args[0] + ": " + wpservice.VersionBuild)
 			} else {
 	            cmd.Help()
 	            os.Exit(1)
