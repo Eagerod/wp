@@ -30,8 +30,8 @@ func main() {
 			if printVersionFlag {
 				fmt.Println(os.Args[0] + ": " + wpservice.VersionBuild)
 			} else {
-	            cmd.Help()
-	            os.Exit(1)
+				cmd.Help()
+				os.Exit(1)
 			}
 
 			return
@@ -73,24 +73,34 @@ func main() {
 	}
 
 	pickCommand := &cobra.Command{
-		Use:   "pick desired_dimensions destination_dir gravity [--scaled] image_path",
+		Use:   "pick desired_dimensions destination_dir gravity [--scaled] image_path [image_path...]",
 		Short: "Pick a single image slice",
 		Long:  "Extract a single slice of an image with the given parameters",
-		Args:  cobra.ExactArgs(4),
+		Args:  cobra.MinimumNArgs(4),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			desiredDimensions := args[0]
 			destinationDir := args[1]
 			gravity := args[2]
-			imagePath := args[3]
+			imagePaths := args[3:]
 
-			err := wpservice.PickFromImage(desiredDimensions, destinationDir, imagePath, scaledFlag, gravity)
+			var errs []error
+			for _, imagePath := range imagePaths {
+				err := wpservice.PickFromImage(desiredDimensions, destinationDir, imagePath, scaledFlag, gravity)
 
-			if err != nil {
-				if softErrorRegexp.FindStringSubmatch(err.Error()) == nil {
-					return err
+				if err != nil {
+					errs = append(errs, err)
+				}
+			}
+
+			// If the only thing the error is is a series of soft errors, don't
+			//   exit with failure.
+			multiError := wpservice.MultiErrorFromErrors(errs)
+			if multiError.Exists() {
+				if softErrorRegexp.FindStringSubmatch(multiError.Error()) == nil {
+					return multiError
 				}
 
-				fmt.Fprintln(os.Stderr, err.Error())
+				fmt.Fprintln(os.Stderr, multiError.Error())
 			}
 
 			return nil

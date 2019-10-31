@@ -154,6 +154,39 @@ func TestPickImage(t *testing.T) {
 	assert.Equal(t, expectedOutput, string(output))
 }
 
+func TestPickMultipleImages(t *testing.T) {
+	cwd, _ := os.Getwd()
+	sourceImage1, _ := filepath.Abs(path.Join(cwd, "test_images", "tall.jpg"))
+	sourceImage2, _ := filepath.Abs(path.Join(cwd, "test_images", "wide.jpg"))
+
+	tempDir, err := ioutil.TempDir("", "")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	cmd := exec.Command("wp", "pick", "128x128", tempDir, "north", sourceImage1, sourceImage2)
+
+	output, err := cmd.CombinedOutput()
+	assert.NoError(t, err)
+
+	tallFilenameSuffixes := []string{
+		"north",
+	}
+
+	wideFilenameSuffixes := []string{
+		"north",
+	}
+
+	expectedOutput := ""
+	for _, str := range tallFilenameSuffixes {
+		expectedOutput += path.Join(tempDir, "128x128", "tall_"+str) + ".jpg\n"
+	}
+	for _, str := range wideFilenameSuffixes {
+		expectedOutput += path.Join(tempDir, "128x128", "wide_"+str) + ".jpg\n"
+	}
+
+	assert.Equal(t, expectedOutput, string(output))
+}
+
 func TestPickImageScaled(t *testing.T) {
 	cwd, _ := os.Getwd()
 	sourceImage, _ := filepath.Abs(path.Join(cwd, "test_images", "square.jpg"))
