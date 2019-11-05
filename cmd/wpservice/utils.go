@@ -7,11 +7,7 @@ import (
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
-	"io"
-	"io/ioutil"
 	"math"
-	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -21,7 +17,6 @@ import (
 )
 
 type ImageMagickRunner func(args ...string) (string, error)
-type FileDownloader func(destFile, sourceUrl string) error
 
 const imagemagickBin string = "convert"
 
@@ -58,24 +53,6 @@ var doImageMagick ImageMagickRunner = func(args ...string) (string, error) {
 	cmd := exec.Command(imagemagickBin, args...)
 	output, err := cmd.CombinedOutput()
 	return string(output), err
-}
-
-// Ripped from https://golangcode.com/download-a-file-from-a-url
-var downloadFile FileDownloader = func(destFile, sourceUrl string) error {
-	resp, err := http.Get(sourceUrl)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	out, err := os.Create(destFile)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	_, err = io.Copy(out, resp.Body)
-	return err
 }
 
 // Get the dimensions of an image at the path passed in.
@@ -125,44 +102,6 @@ func osMkdirp(p string, mode os.FileMode) error {
 	}
 
 	return nil
-}
-
-// Take the provided source path, and make a temporary copy of it that can be
-//   fed through imagemagick repeatedly.
-// The returned path will be within a temporary directory that must be deleted
-//   by the caller
-func PrepareImageFromSource(sourcePath string) (string, error) {
-	tempDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		return "", err
-	}
-
-	destPath := path.Join(tempDir, path.Base(sourcePath))
-
-	pathUrl, err := url.Parse(sourcePath)
-	if err != nil {
-		return "", err
-	}
-
-	if pathUrl.Scheme == "file" || pathUrl.Scheme == "" {
-		source, err := os.Open(pathUrl.Path)
-		if err != nil {
-			return "", err
-		}
-		defer source.Close()
-
-		destination, err := os.Create(destPath)
-		if err != nil {
-			return "", err
-		}
-		defer destination.Close()
-
-		_, err = io.Copy(destination, source)
-	} else {
-		err = downloadFile(destPath, sourcePath)
-	}
-
-	return destPath, err
 }
 
 /*
@@ -282,27 +221,15 @@ func ExtractFromLocalImage(intendedDimensions string, destination string, localP
 	return nil
 }
 
-func ExtractFromImage(intendedDimensions string, destination string, sourcePath string) error {
-	tempImage, err := PrepareImageFromSource(sourcePath)
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(path.Base(tempImage))
-
-	return ExtractFromLocalImage(intendedDimensions, destination, tempImage)
+func ExtractFromImage(intendedDimensions string, destination string, imageSource *ImageSource) error {
+	return ExtractFromLocalImage(intendedDimensions, destination, imageSource.LocalPath)
 }
 
-func PickFromImage(intendedDimensions string, destination string, sourcePath string, scaled bool, gravity string) error {
-	tempImage, err := PrepareImageFromSource(sourcePath)
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(path.Base(tempImage))
-
+func PickFromImage(intendedDimensions string, destination string, imageSource *ImageSource, scaled bool, gravity string) error {
 	destination = path.Join(destination, intendedDimensions)
 	if err := osMkdirp(destination, 0755); err != nil {
 		return err
 	}
 
-	return ExtractGravitiesFromLocalImage(tempImage, scaled, []string{gravity}, intendedDimensions, destination)
+	return ExtractGravitiesFromLocalImage(imageSource.LocalPath, scaled, []string{gravity}, intendedDimensions, destination)
 }

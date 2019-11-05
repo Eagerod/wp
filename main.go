@@ -21,6 +21,7 @@ var softErrorRegexp *regexp.Regexp = regexp.MustCompile(`^(?:Image .*? is not (?
 func main() {
 	var scaledFlag bool
 	var printVersionFlag bool
+	var cacheDir string
 
 	baseCommand := &cobra.Command{
 		Use:   os.Args[0],
@@ -50,7 +51,13 @@ func main() {
 
 			var errs []error
 			for _, imagePath := range imagePaths {
-				err := wpservice.ExtractFromImage(desiredDimensions, destinationDir, imagePath)
+				is, err := wpservice.PrepareImageFromSource(imagePath, cacheDir)
+				if err != nil {
+					return err
+				}
+				defer wpservice.CleanupImageSource(is)
+
+				err = wpservice.ExtractFromImage(desiredDimensions, destinationDir, is)
 
 				if err != nil {
 					errs = append(errs, err)
@@ -85,7 +92,13 @@ func main() {
 
 			var errs []error
 			for _, imagePath := range imagePaths {
-				err := wpservice.PickFromImage(desiredDimensions, destinationDir, imagePath, scaledFlag, gravity)
+				is, err := wpservice.PrepareImageFromSource(imagePath, cacheDir)
+				if err != nil {
+					return err
+				}
+				defer wpservice.CleanupImageSource(is)
+
+				err = wpservice.PickFromImage(desiredDimensions, destinationDir, is, scaledFlag, gravity)
 
 				if err != nil {
 					errs = append(errs, err)
@@ -112,7 +125,10 @@ func main() {
 
 	baseCommand.Flags().BoolVarP(&printVersionFlag, "version", "v", false, "Print the application version and exit")
 
+	extractCommand.Flags().StringVarP(&cacheDir, "cache", "", "", "Source image cache; used to prevent repeated downloads")
+
 	pickCommand.Flags().BoolVarP(&scaledFlag, "scaled", "", false, "Scale the image to the desired dimensions, rather than maintaining scale")
+	pickCommand.Flags().StringVarP(&cacheDir, "cache", "", "", "Source image cache; used to prevent repeated downloads")
 
 	if err := baseCommand.Execute(); err != nil {
 		os.Exit(1)

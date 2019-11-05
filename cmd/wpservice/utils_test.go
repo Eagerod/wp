@@ -118,6 +118,30 @@ func TestExtractGravitiesFromLocalImageUnscaled(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestExtractGravitiesFromLocalImageAlreadyExists(t *testing.T) {
+	f := doImageMagick
+	defer func() {
+		doImageMagick = f
+	}()
+
+	tempDir, err := ioutil.TempDir("", "")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	outputPath := path.Join(tempDir, "abc_center")
+
+	_, err = os.Create(outputPath)
+    assert.NoError(t, err)
+
+	doImageMagick = func(args ...string) (string, error) {
+		assert.Fail(t, "Imagemagick should not be called in this test")
+		return "", nil
+	}
+
+	err = ExtractGravitiesFromLocalImage("abc", false, []string{"Center"}, "64x64", tempDir)
+	assert.NoError(t, err)
+}
+
 func TestExtractFromLocalImageSameAspectRatio(t *testing.T) {
 	f := doImageMagick
 	defer func() {
@@ -283,77 +307,13 @@ func TestExtractFromImageLocal(t *testing.T) {
 	sourceImage, err := filepath.Abs(path.Join(cwd, "..", "..", "test_images", "tall.jpg"))
 	assert.NoError(t, err)
 
-	tempDir, err := ioutil.TempDir("", "")
-	assert.NoError(t, err)
-	defer os.RemoveAll(tempDir)
-
-	doImageMagick = func(args ...string) (string, error) {
-		return "", nil
-	}
-
-	err = ExtractFromImage("64x64", tempDir, sourceImage)
-	assert.NoError(t, err)
-}
-
-func TestExtractFromImageUsingFileProtocol(t *testing.T) {
-	f := doImageMagick
-	defer func() {
-		doImageMagick = f
-	}()
-
-	cwd, err := os.Getwd()
-	assert.NoError(t, err)
-
-	sourceImage, err := filepath.Abs(path.Join(cwd, "..", "..", "test_images", "tall.jpg"))
+	is, err := PrepareImageFromSource(sourceImage, "")
 	assert.NoError(t, err)
 
 	tempDir, err := ioutil.TempDir("", "")
 	assert.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
-	doImageMagick = func(args ...string) (string, error) {
-		return "", nil
-	}
-
-	err = ExtractFromImage("64x64", tempDir, "file://"+sourceImage)
-	assert.NoError(t, err)
-}
-
-func TestExtractFromImageUsingRemoteFile(t *testing.T) {
-	f := doImageMagick
-	defer func() {
-		doImageMagick = f
-	}()
-
-	g := downloadFile
-	defer func() {
-		downloadFile = g
-	}()
-
-	cwd, err := os.Getwd()
-	assert.NoError(t, err)
-
-	sourceImage, err := filepath.Abs(path.Join(cwd, "..", "..", "test_images", "tall.jpg"))
-	assert.NoError(t, err)
-
-	tempDir, err := ioutil.TempDir("", "")
-	assert.NoError(t, err)
-	defer os.RemoveAll(tempDir)
-
-	doImageMagick = func(args ...string) (string, error) {
-		return "", nil
-	}
-
-	downloadFile = func(dest, url string) error {
-		input, err := ioutil.ReadFile(sourceImage)
-		assert.NoError(t, err)
-
-		err = ioutil.WriteFile(dest, input, 0644)
-		assert.NoError(t, err)
-		return nil
-	}
-
-	// Download file is mocked, so url can be invalid
-	err = ExtractFromImage("64x64", tempDir, "http://"+sourceImage)
+	err = ExtractFromImage("64x64", tempDir, is)
 	assert.NoError(t, err)
 }
