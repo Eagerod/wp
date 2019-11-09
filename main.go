@@ -1,7 +1,5 @@
 package main
 
-// Need to load up the image libraries for them to be registered for decoding.
-// Yay side effects!
 import (
 	"fmt"
 	"os"

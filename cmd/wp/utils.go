@@ -1,5 +1,7 @@
 package wp
 
+// Need to load up the image libraries for them to be registered for decoding.
+// Yay side effects!
 import (
 	"errors"
 	"fmt"
