@@ -1,4 +1,4 @@
-module gitea.internal.aleemhaji.com/aleem/wp
+module github.com/Eagerod/wp
 
 go 1.13
 
