@@ -11,7 +11,7 @@ import (
 )
 
 import (
-	"gitea.internal.aleemhaji.com/aleem/wp/cmd/wp"
+	"github.com/Eagerod/wp/cmd/wp"
 )
 
 var softErrorRegexp *regexp.Regexp = regexp.MustCompile(`^(?:Image .*? is not (?:tall|wide) enough to produce quality output\n?)+$`)
