@@ -228,8 +228,12 @@ func ExtractFromImage(intendedDimensions string, destination string, imageSource
 }
 
 func PickFromImage(intendedDimensions string, destination string, imageSource *ImageSource, scaled bool, gravity string) error {
-	destination = path.Join(destination, intendedDimensions)
-	if err := osMkdirp(destination, 0755); err != nil {
+	destination, err := filepath.Abs(path.Join(destination, intendedDimensions))
+	if err != nil {
+		return err
+	}
+
+	if err = osMkdirp(destination, 0755); err != nil {
 		return err
 	}
 
