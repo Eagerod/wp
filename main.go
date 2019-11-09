@@ -13,7 +13,7 @@ import (
 )
 
 import (
-	"gitea.internal.aleemhaji.com/aleem/wp/cmd/wpservice"
+	"gitea.internal.aleemhaji.com/aleem/wp/cmd/wp"
 )
 
 var softErrorRegexp *regexp.Regexp = regexp.MustCompile(`^(?:Image .*? is not (?:tall|wide) enough to produce quality output\n?)+$`)
@@ -29,7 +29,7 @@ func main() {
 		Long:  "Manipulate images for use as desktop wallpapers",
 		Run: func(cmd *cobra.Command, args []string) {
 			if printVersionFlag {
-				fmt.Println(os.Args[0] + ": " + wpservice.VersionBuild)
+				fmt.Println(os.Args[0] + ": " + wp.VersionBuild)
 			} else {
 				cmd.Help()
 				os.Exit(1)
@@ -51,13 +51,13 @@ func main() {
 
 			var errs []error
 			for _, imagePath := range imagePaths {
-				is, err := wpservice.PrepareImageFromSource(imagePath, cacheDir)
+				is, err := wp.PrepareImageFromSource(imagePath, cacheDir)
 				if err != nil {
 					return err
 				}
-				defer wpservice.CleanupImageSource(is)
+				defer wp.CleanupImageSource(is)
 
-				err = wpservice.ExtractFromImage(desiredDimensions, destinationDir, is)
+				err = wp.ExtractFromImage(desiredDimensions, destinationDir, is)
 
 				if err != nil {
 					errs = append(errs, err)
@@ -66,7 +66,7 @@ func main() {
 
 			// If the only thing the error is is a series of soft errors, don't
 			//   exit with failure.
-			multiError := wpservice.MultiErrorFromErrors(errs)
+			multiError := wp.MultiErrorFromErrors(errs)
 			if multiError.Exists() {
 				if softErrorRegexp.FindStringSubmatch(multiError.Error()) == nil {
 					return multiError
@@ -92,13 +92,13 @@ func main() {
 
 			var errs []error
 			for _, imagePath := range imagePaths {
-				is, err := wpservice.PrepareImageFromSource(imagePath, cacheDir)
+				is, err := wp.PrepareImageFromSource(imagePath, cacheDir)
 				if err != nil {
 					return err
 				}
-				defer wpservice.CleanupImageSource(is)
+				defer wp.CleanupImageSource(is)
 
-				err = wpservice.PickFromImage(desiredDimensions, destinationDir, is, scaledFlag, gravity)
+				err = wp.PickFromImage(desiredDimensions, destinationDir, is, scaledFlag, gravity)
 
 				if err != nil {
 					errs = append(errs, err)
@@ -107,7 +107,7 @@ func main() {
 
 			// If the only thing the error is is a series of soft errors, don't
 			//   exit with failure.
-			multiError := wpservice.MultiErrorFromErrors(errs)
+			multiError := wp.MultiErrorFromErrors(errs)
 			if multiError.Exists() {
 				if softErrorRegexp.FindStringSubmatch(multiError.Error()) == nil {
 					return multiError

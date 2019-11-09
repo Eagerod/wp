@@ -1,4 +1,4 @@
-package wpservice
+package wp
 
 import (
 	"io"
@@ -12,7 +12,7 @@ import (
 
 type ImageSource struct {
 	SourcePath string
-	LocalPath string
+	LocalPath  string
 
 	deleteParentDir bool
 }
@@ -28,7 +28,7 @@ func (is *ImageSource) GetImagePath() (string, error) {
 	if pathUrl.Scheme != "" && pathUrl.Scheme != "file" {
 		return path.Join(pathUrl.Hostname(), filepath.Dir(pathUrl.Path)), nil
 	}
-	
+
 	return "", nil
 }
 
@@ -85,14 +85,13 @@ func PrepareImageFromSource(sourcePath string, cacheDir string) (*ImageSource, e
 		return nil, err
 	}
 
-	_, err = os.Stat(is.LocalPath)
-	if err != nil && !os.IsNotExist(err) {
-        return nil, err
-    }
+	if _, err = os.Stat(is.LocalPath); err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
 
-    if err == nil {
-    	return &is, nil
-    }
+	if err == nil {
+		return &is, nil
+	}
 
 	pathUrl, err := url.Parse(is.SourcePath)
 	if err != nil {

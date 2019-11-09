@@ -1,4 +1,4 @@
-package wpservice
+package wp
 
 import (
 	"image"

@@ -1,18 +1,29 @@
+GO := go
+IMAGEMAGICK := convert
+
 MAIN_FILE := main.go
 
 BUILD_DIR := build
 EXECUTABLE := wp
 BIN_NAME := $(BUILD_DIR)/$(EXECUTABLE)
 
-SRC := $(shell find . -iname "*.go" -and -not -name "*_test.go") cmd/wpservice/version.go
-TEST_IMAGES := test_images/square.jpg test_images/wide.jpg test_images/tall.jpg
+WP_PACKAGE_DIR := ./cmd/wp
+PACKAGE_PATHS := $(WP_PACKAGE_DIR)
+
+SRC := $(shell find . -iname "*.go" -and -not -name "*_test.go") $(WP_PACKAGE_DIR)/version.go
+TEST_IMAGES_DIR := test_images
+TEST_IMAGES := \
+	$(TEST_IMAGES_DIR)/square.jpg \
+	$(TEST_IMAGES_DIR)/wide.jpg \
+	$(TEST_IMAGES_DIR)/tall.jpg
+
 
 .PHONY: all
 all: $(BIN_NAME)
 
 $(BIN_NAME): $(SRC)
 	@mkdir -p $(BUILD_DIR)
-	go build -o $(BIN_NAME) $(MAIN_FILE)
+	$(GO) build -o $(BIN_NAME) $(MAIN_FILE)
 
 .PHONY: install
 install: $(BIN_NAME)
@@ -20,52 +31,52 @@ install: $(BIN_NAME)
 
 .PHONY: test
 test: $(TEST_IMAGES)
-	go test -v ./cmd/wpservice
+	$(GO) test -v $(PACKAGE_PATHS)
 
 .PHONY: system-test
 system-test: install $(TEST_IMAGES)
-	go test -v main_test.go 
+	$(GO) test -v main_test.go
 
 .PHONY: test-cover
-test-cover: 
-	go test -v --coverprofile=coverage.out ./cmd/wpservice
+test-cover:
+	$(GO) test -v --coverprofile=coverage.out $(PACKAGE_PATHS)
 
 .PHONY: coverage
 coverage: test-cover
-	go tool cover -func=coverage.out
+	$(GO) tool cover -func=coverage.out
 
-.INTERMEDIATE: cmd/wpservice/version.go
-cmd/wpservice/version.go:
-	version=$$(cat VERSION) && \
+.INTERMEDIATE: $(WP_PACKAGE_DIR)/version.go
+$(WP_PACKAGE_DIR)/version.go:
+	@version=$$(cat VERSION) && \
 	build=$$(git rev-parse --short HEAD && if [ ! -z "$$(git diff)" ]; then echo "- dirty"; fi) && \
 	printf \
 		"%s\n\n%s\n%s\n\n%s\n" \
-		"package wpservice" \
+		"package wp" \
 		"const Version string = \"v$$(printf '%s' $$version)\"" \
 		"const Build string = \"$$(printf '%s' $$build)\"" \
 		"const VersionBuild string = Version + \"-\" + Build" > $@
 
 .PHONY: pretty-coverage
 pretty-coverage: test-cover
-	go tool cover -html=coverage.out
+	$(GO) tool cover -html=coverage.out
 
-test_images/square.jpg:
-	mkdir -p test_images
-	convert -size 128x128 xc:black $@
+$(TEST_IMAGES_DIR)/square.jpg:
+	mkdir -p $(TEST_IMAGES_DIR)
+	$(IMAGEMAGICK) -size 128x128 xc:black $@
 
-test_images/wide.jpg:
-	mkdir -p test_images
-	convert -size 256x128 xc:black $@
+$(TEST_IMAGES_DIR)/wide.jpg:
+	mkdir -p $(TEST_IMAGES_DIR)
+	$(IMAGEMAGICK) -size 256x128 xc:black $@
 
-test_images/tall.jpg:
-	mkdir -p test_images
-	convert -size 128x256 xc:black $@
+$(TEST_IMAGES_DIR)/tall.jpg:
+	mkdir -p $(TEST_IMAGES_DIR)
+	$(IMAGEMAGICK) -size 128x256 xc:black $@
 
 .PHONY: fmt
 fmt:
-	@go fmt .
-	@go fmt ./cmd/wpservice
+	@$(GO) fmt .
+	@$(GO) fmt $(WP_PACKAGE_DIR)
 
 .PHONY: clean
 clean:
-	rm -rf coverage.out $(BUILD_DIR)
+	rm -rf coverage.out $(BUILD_DIR) $(TEST_IMAGES_DIR)

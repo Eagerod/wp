@@ -1,4 +1,4 @@
-package wpservice
+package wp
 
 import (
 	"fmt"
@@ -131,7 +131,7 @@ func TestExtractGravitiesFromLocalImageAlreadyExists(t *testing.T) {
 	outputPath := path.Join(tempDir, "abc_center")
 
 	_, err = os.Create(outputPath)
-    assert.NoError(t, err)
+	assert.NoError(t, err)
 
 	doImageMagick = func(args ...string) (string, error) {
 		assert.Fail(t, "Imagemagick should not be called in this test")
