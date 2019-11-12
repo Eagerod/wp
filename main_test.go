@@ -131,7 +131,8 @@ func TestExtractMultipleImages(t *testing.T) {
 }
 
 // This test exists for historical purposes.
-// There was once an issue where image extractions from the 
+// There was once an issue where image extractions where the source image is
+//   in the current working directory lead to the image being removed.
 func TestExtractFromThisDirectory(t *testing.T) {
 	cwd, _ := os.Getwd()
 		
@@ -180,6 +181,8 @@ func TestExtractFromThisDirectory(t *testing.T) {
 
 	_, err = os.Stat(sourceImage)
 	assert.NoError(t, err)
+
+	os.Remove(sourceImage)
 }
 
 func TestPickImage(t *testing.T) {
