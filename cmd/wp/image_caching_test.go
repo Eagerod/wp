@@ -80,3 +80,22 @@ func TestPrepareImageFromSourceRemote(t *testing.T) {
 	assert.Equal(t, "square.jpg", path.Base(is.LocalPath))
 	CleanupImageSource(is)
 }
+
+func TestCleanupImageSource(t *testing.T) {
+	cwd, _ := os.Getwd()
+	sourceImage, err := filepath.Abs(path.Join(cwd, "..", "..", "test_images", "square.jpg"))
+	assert.NoError(t, err)
+
+	is, err := PrepareImageFromSource(sourceImage, "")
+	assert.NoError(t, err)
+
+	assert.Equal(t, "square.jpg", path.Base(is.LocalPath))
+	CleanupImageSource(is)
+
+	_, err = os.Stat(filepath.Dir(is.LocalPath))
+
+	e, ok := err.(*os.PathError)
+	assert.True(t, ok)
+	assert.NotNil(t, e)
+	assert.True(t, os.IsNotExist(e))
+}
