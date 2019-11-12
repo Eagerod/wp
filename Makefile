@@ -31,11 +31,20 @@ install: $(BIN_NAME)
 
 .PHONY: test
 test: $(TEST_IMAGES)
-	$(GO) test -v $(PACKAGE_PATHS)
+	@if [ -z $$T ]; then \
+		$(GO) test -v $(PACKAGE_PATHS); \
+	else \
+		$(GO) test -v $(PACKAGE_PATHS) -run $$T; \
+	fi
 
 .PHONY: system-test
 system-test: install $(TEST_IMAGES)
-	$(GO) test -v main_test.go
+	@if [ -z $$T ]; then \
+		$(GO) test -v main_test.go; \
+	else \
+		$(GO) test -v main_test.go -run $$T; \
+	fi
+	
 
 .PHONY: test-cover
 test-cover:
