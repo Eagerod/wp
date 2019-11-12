@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -129,6 +130,61 @@ func TestExtractMultipleImages(t *testing.T) {
 	assert.Equal(t, expectedOutput, string(output))
 }
 
+// This test exists for historical purposes.
+// There was once an issue where image extractions where the source image is
+//   in the current working directory lead to the image being removed.
+func TestExtractFromThisDirectory(t *testing.T) {
+	cwd, _ := os.Getwd()
+		
+	originalImage, _ := filepath.Abs(path.Join(cwd, "test_images", "square.jpg"))
+	sourceImage, _ := filepath.Abs(path.Join(cwd, "square.jpg"))
+
+	// Copy square.jpg from test images to the current working dir.
+	source, err := os.Open(originalImage)
+	assert.NoError(t, err)
+
+	destination, err := os.Create(sourceImage)
+	assert.NoError(t, err)
+
+	_, err = io.Copy(destination, source)
+	source.Close()
+	destination.Close()
+
+	tempDir, err := ioutil.TempDir("", "")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	cmd := exec.Command("wp", "extract", "128x128", tempDir, sourceImage)
+
+	output, err := cmd.CombinedOutput()
+	assert.NoError(t, err)
+
+	filenameSuffixes := []string{
+		"scaled_center",
+		"north",
+		"northeast",
+		"east",
+		"southeast",
+		"south",
+		"southwest",
+		"west",
+		"northwest",
+		"center",
+	}
+
+	expectedOutput := ""
+	for _, str := range filenameSuffixes {
+		expectedOutput += path.Join(tempDir, "128x128", "square_"+str) + ".jpg\n"
+	}
+
+	assert.Equal(t, expectedOutput, string(output))
+
+	_, err = os.Stat(sourceImage)
+	assert.NoError(t, err)
+
+	os.Remove(sourceImage)
+}
+
 func TestPickImage(t *testing.T) {
 	cwd, _ := os.Getwd()
 	sourceImage, _ := filepath.Abs(path.Join(cwd, "test_images", "square.jpg"))
@@ -210,4 +266,50 @@ func TestPickImageScaled(t *testing.T) {
 	}
 
 	assert.Equal(t, expectedOutput, string(output))
+}
+
+// This test exists for historical purposes.
+// There was once an issue where image extractions where the source image is
+//   in the current working directory lead to the image being removed.
+func TestPickFromThisDirectory(t *testing.T) {
+	cwd, _ := os.Getwd()
+		
+	originalImage, _ := filepath.Abs(path.Join(cwd, "test_images", "square.jpg"))
+	sourceImage, _ := filepath.Abs(path.Join(cwd, "square.jpg"))
+
+	// Copy square.jpg from test images to the current working dir.
+	source, err := os.Open(originalImage)
+	assert.NoError(t, err)
+
+	destination, err := os.Create(sourceImage)
+	assert.NoError(t, err)
+
+	_, err = io.Copy(destination, source)
+	source.Close()
+	destination.Close()
+
+	tempDir, err := ioutil.TempDir("", "")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	cmd := exec.Command("wp", "pick", "128x128", tempDir, "north", sourceImage)
+
+	output, err := cmd.CombinedOutput()
+	assert.NoError(t, err)
+
+	filenameSuffixes := []string{
+		"north",
+	}
+
+	expectedOutput := ""
+	for _, str := range filenameSuffixes {
+		expectedOutput += path.Join(tempDir, "128x128", "square_"+str) + ".jpg\n"
+	}
+
+	assert.Equal(t, expectedOutput, string(output))
+
+	_, err = os.Stat(sourceImage)
+	assert.NoError(t, err)
+
+	os.Remove(sourceImage)
 }

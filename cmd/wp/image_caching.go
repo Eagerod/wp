@@ -121,7 +121,7 @@ func PrepareImageFromSource(sourcePath string, cacheDir string) (*ImageSource, e
 
 func CleanupImageSource(is *ImageSource) error {
 	if is.deleteParentDir {
-		return os.RemoveAll(path.Base(is.LocalPath))
+		return os.RemoveAll(path.Dir(is.LocalPath))
 	}
 
 	return nil
