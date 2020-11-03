@@ -10,7 +10,10 @@ BIN_NAME := $(BUILD_DIR)/$(EXECUTABLE)
 WP_PACKAGE_DIR := ./cmd/wp
 PACKAGE_PATHS := $(WP_PACKAGE_DIR)
 
-SRC := $(shell find . -iname "*.go" -and -not -name "*_test.go") $(WP_PACKAGE_DIR)/version.go
+AUTOGEN_VERSION_FILENAME=$(WP_PACKAGE_DIR)/version-temp.go
+
+SRC := $(shell find . -iname "*.go" -and -not -name "*_test.go") $(AUTOGEN_VERSION_FILENAME)
+
 TEST_IMAGES_DIR := test_images
 TEST_IMAGES := \
 	$(TEST_IMAGES_DIR)/square.jpg \
@@ -54,16 +57,12 @@ test-cover:
 coverage: test-cover
 	$(GO) tool cover -func=coverage.out
 
-.INTERMEDIATE: $(WP_PACKAGE_DIR)/version.go
-$(WP_PACKAGE_DIR)/version.go:
-	@version=$$(cat VERSION) && \
-	build=$$(git rev-parse --short HEAD && if [ ! -z "$$(git diff)" ]; then echo "- dirty"; fi) && \
-	printf \
-		"%s\n\n%s\n%s\n\n%s\n" \
-		"package wp" \
-		"const Version string = \"v$$(printf '%s' $$version)\"" \
-		"const Build string = \"$$(printf '%s' $$build)\"" \
-		"const VersionBuild string = Version + \"-\" + Build" > $@
+.INTERMEDIATE: $(AUTOGEN_VERSION_FILENAME)
+$(AUTOGEN_VERSION_FILENAME):
+	@version="v$$(cat VERSION)" && \
+	build="$$(if [ "$$(git describe)" != "$$version" ]; then echo "-$$(git rev-parse --short HEAD)"; fi)" && \
+	dirty="$$(if [ ! -z "$$(git diff)" ]; then echo "-dirty"; fi)" && \
+	printf "package cmd\n\nconst VersionBuild = \"%s%s%s\"" $$version $$build $$dirty > $@
 
 .PHONY: pretty-coverage
 pretty-coverage: test-cover
