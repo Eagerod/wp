@@ -19,16 +19,6 @@ var baseCommand = &cobra.Command{
 	Use:   os.Args[0],
 	Short: "Wallpaper Generator CLI",
 	Long:  "Manipulate images for use as desktop wallpapers",
-	Run: func(cmd *cobra.Command, args []string) {
-		if printVersionFlag {
-			fmt.Println(os.Args[0] + ": " + VersionBuild)
-		} else {
-			cmd.Help()
-			os.Exit(1)
-		}
-
-		return
-	},
 }
 
 var extractCommand = &cobra.Command{
@@ -115,6 +105,7 @@ var pickCommand = &cobra.Command{
 func Execute() {
 	baseCommand.AddCommand(extractCommand)
 	baseCommand.AddCommand(pickCommand)
+	baseCommand.AddCommand(versionCommand)
 
 	baseCommand.Flags().BoolVarP(&printVersionFlag, "version", "v", false, "Print the application version and exit")
 
