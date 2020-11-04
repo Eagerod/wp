@@ -10,7 +10,6 @@ import (
 var softErrorRegexp *regexp.Regexp = regexp.MustCompile(`^(?:Image .*? is not (?:tall|wide) enough to produce quality output\n?)+$`)
 
 var scaledFlag bool
-var printVersionFlag bool
 var cacheDir string
 
 var baseCommand = &cobra.Command{
@@ -23,8 +22,6 @@ func Execute() {
 	baseCommand.AddCommand(extractCommand)
 	baseCommand.AddCommand(pickCommand)
 	baseCommand.AddCommand(versionCommand)
-
-	baseCommand.Flags().BoolVarP(&printVersionFlag, "version", "v", false, "Print the application version and exit")
 
 	extractCommand.Flags().StringVarP(&cacheDir, "cache", "", "", "Source image cache; used to prevent repeated downloads")
 
