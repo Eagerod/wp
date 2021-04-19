@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 )
 
 type ImageSource struct {
@@ -58,6 +59,19 @@ var downloadFile FileDownloader = func(destFile, sourceUrl string) error {
 func PrepareImageFromSource(sourcePath string, cacheDir string) (*ImageSource, error) {
 	is := ImageSource{}
 	is.SourcePath = sourcePath
+
+	// If the SourcePath is rooted in the cache directory, bail early, because
+	//   there's nothing interesting to do, and trying to use any kind of
+	//   recaching logic will just duplicate the image in the cache directory.
+	if cacheDir != "" && strings.HasPrefix(is.SourcePath, cacheDir) {
+		if _, err := os.Stat(is.SourcePath); err != nil {
+			return nil, err
+		}
+
+		is.LocalPath = is.SourcePath
+		is.deleteParentDir = false
+		return &is, nil
+	}
 
 	var outputDir string
 	if cacheDir == "" {

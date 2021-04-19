@@ -43,6 +43,23 @@ func TestPrepareImageFromSourceLocalCached(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestPrepareImageFromSourceLocalCachedInCacheDir(t *testing.T) {
+	cwd, _ := os.Getwd()
+	projectRoot, err := filepath.Abs(path.Join(cwd, "..", ".."))
+	assert.NoError(t, err)
+	sourceImage, err := filepath.Abs(path.Join(projectRoot, "test_images", "square.jpg"))
+	assert.NoError(t, err)
+
+	is, err := PrepareImageFromSource(sourceImage, projectRoot)
+	assert.NoError(t, err)
+
+	assert.Equal(t, is.SourcePath, is.LocalPath)
+	CleanupImageSource(is)
+
+	_, err = os.Stat(is.LocalPath)
+	assert.NoError(t, err)
+}
+
 func TestPrepareImageFromSourceLocalWithProtocol(t *testing.T) {
 	cwd, _ := os.Getwd()
 	sourceImage, err := filepath.Abs(path.Join(cwd, "..", "..", "test_images", "square.jpg"))
