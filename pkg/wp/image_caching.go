@@ -72,6 +72,7 @@ func PrepareImageFromSource(sourcePath string, cacheDir string) (*ImageSource, e
 	// If the SourcePath is rooted in the cache directory, bail early, because
 	//   there's nothing interesting to do, and trying to use any kind of
 	//   recaching logic will just duplicate the image in the cache directory.
+	// Doesn't obey obey symlinks, for now.
 	if cacheDir != "" {
 		isLocal, err := is.SourcePathIsLocal()
 		if err != nil {
