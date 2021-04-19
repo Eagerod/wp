@@ -6,6 +6,7 @@ MAIN_FILE := main.go
 BUILD_DIR := build
 EXECUTABLE := wp
 BIN_NAME := $(BUILD_DIR)/$(EXECUTABLE)
+INSTALLED_NAME := /usr/local/bin/$(EXECUTABLE)
 
 WP_PACKAGE_DIR := ./cmd/wp
 PACKAGE_PATHS := $(WP_PACKAGE_DIR)
@@ -30,9 +31,9 @@ $(BIN_NAME): $(SRC)
 	@mkdir -p $(BUILD_DIR)
 	$(GO) build -o $(BIN_NAME) $(MAIN_FILE)
 
-.PHONY: install
-install: $(BIN_NAME)
-	cp $(BIN_NAME) /usr/local/bin/$(EXECUTABLE)
+.PHONY: install isntall
+install isntall: $(BIN_NAME)
+	cp $(BIN_NAME) $(INSTALLED_NAME)
 
 .PHONY: test
 test: $(TEST_IMAGES) $(AUTOGEN_VERSION_FILENAME) $(BIN_NAME)
