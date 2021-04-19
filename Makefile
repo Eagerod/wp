@@ -6,6 +6,7 @@ MAIN_FILE := main.go
 BUILD_DIR := build
 EXECUTABLE := wp
 BIN_NAME := $(BUILD_DIR)/$(EXECUTABLE)
+INSTALLED_NAME := /usr/local/bin/$(EXECUTABLE)
 
 WP_PACKAGE_DIR := ./cmd/wp
 PACKAGE_PATHS := $(WP_PACKAGE_DIR)
@@ -20,6 +21,10 @@ TEST_IMAGES := \
 	$(TEST_IMAGES_DIR)/wide.jpg \
 	$(TEST_IMAGES_DIR)/tall.jpg
 
+COVERAGE_FILE=coverage.out
+
+PUBLISH = publish/wp-linux-amd64 publish/wp-darwin-amd64
+
 
 .PHONY: all
 all: $(BIN_NAME)
@@ -28,34 +33,46 @@ $(BIN_NAME): $(SRC)
 	@mkdir -p $(BUILD_DIR)
 	$(GO) build -o $(BIN_NAME) $(MAIN_FILE)
 
-.PHONY: install
-install: $(BIN_NAME)
-	cp $(BIN_NAME) /usr/local/bin/$(EXECUTABLE)
+
+.PHONY: publish
+publish: $(PUBLISH)
+
+.PHONY: publish/wp-linux-amd64
+publish/wp-linux-amd64:
+	# Force build; don't let existing versions interfere.
+	rm -f $(BIN_NAME)
+	GOOS=linux GOARCH=amd64 $(MAKE) $(BIN_NAME)
+	mkdir -p $$(dirname "$@")
+	mv $(BIN_NAME) $@
+
+.PHONY: publish/wp-darwin-amd64
+publish/wp-darwin-amd64:
+	# Force build; don't let existing versions interfere.
+	rm -f $(BIN_NAME)
+	GOOS=darwin GOARCH=amd64 $(MAKE) $(BIN_NAME)
+	mkdir -p $$(dirname "$@")
+	mv $(BIN_NAME) $@
+
+
+.PHONY: install isntall
+install isntall: $(BIN_NAME)
+	cp $(BIN_NAME) $(INSTALLED_NAME)
 
 .PHONY: test
-test: $(TEST_IMAGES)
+test: $(TEST_IMAGES) $(AUTOGEN_VERSION_FILENAME) $(BIN_NAME)
 	@if [ -z $$T ]; then \
-		$(GO) test -v $(PACKAGE_PATHS); \
+		$(GO) test -v ./...; \
 	else \
-		$(GO) test -v $(PACKAGE_PATHS) -run $$T; \
+		$(GO) test -v ./... -run $$T; \
 	fi
 
-.PHONY: system-test
-system-test: install $(TEST_IMAGES)
-	@if [ -z $$T ]; then \
-		$(GO) test -v main_test.go; \
-	else \
-		$(GO) test -v main_test.go -run $$T; \
-	fi
-	
 
-.PHONY: test-cover
-test-cover:
-	$(GO) test -v --coverprofile=coverage.out $(PACKAGE_PATHS)
+$(COVERAGE_FILE): $(TEST_IMAGES) $(AUTOGEN_VERSION_FILENAME) $(BIN_NAME)
+	$(GO) test -v --coverprofile=$(COVERAGE_FILE) ./...
 
 .PHONY: coverage
-coverage: test-cover
-	$(GO) tool cover -func=coverage.out
+coverage: $(COVERAGE_FILE)
+	$(GO) tool cover -func=$(COVERAGE_FILE)
 
 .INTERMEDIATE: $(AUTOGEN_VERSION_FILENAME)
 $(AUTOGEN_VERSION_FILENAME):
@@ -65,8 +82,8 @@ $(AUTOGEN_VERSION_FILENAME):
 	printf "package cmd\n\nconst VersionBuild = \"%s%s%s\"" $$version $$build $$dirty > $@
 
 .PHONY: pretty-coverage
-pretty-coverage: test-cover
-	$(GO) tool cover -html=coverage.out
+pretty-coverage: $(COVERAGE_FILE)
+	$(GO) tool cover -html=$(COVERAGE_FILE)
 
 $(TEST_IMAGES_DIR)/square.jpg:
 	mkdir -p $(TEST_IMAGES_DIR)
@@ -82,9 +99,8 @@ $(TEST_IMAGES_DIR)/tall.jpg:
 
 .PHONY: fmt
 fmt:
-	@$(GO) fmt .
-	@$(GO) fmt $(WP_PACKAGE_DIR)
+	@$(GO) fmt ./...
 
 .PHONY: clean
 clean:
-	rm -rf coverage.out $(BUILD_DIR) $(TEST_IMAGES_DIR)
+	rm -rf $(COVERAGE_FILE) $(BUILD_DIR) $(TEST_IMAGES_DIR)
