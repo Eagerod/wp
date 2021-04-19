@@ -23,6 +23,8 @@ TEST_IMAGES := \
 
 COVERAGE_FILE=coverage.out
 
+PUBLISH = publish/wp-linux-amd64 publish/wp-darwin-amd64
+
 
 .PHONY: all
 all: $(BIN_NAME)
@@ -30,6 +32,27 @@ all: $(BIN_NAME)
 $(BIN_NAME): $(SRC)
 	@mkdir -p $(BUILD_DIR)
 	$(GO) build -o $(BIN_NAME) $(MAIN_FILE)
+
+
+.PHONY: publish
+publish: $(PUBLISH)
+
+.PHONY: publish/wp-linux-amd64
+publish/wp-linux-amd64:
+	# Force build; don't let existing versions interfere.
+	rm -f $(BIN_NAME)
+	GOOS=linux GOARCH=amd64 $(MAKE) $(BIN_NAME)
+	mkdir -p $$(dirname "$@")
+	mv $(BIN_NAME) $@
+
+.PHONY: publish/wp-darwin-amd64
+publish/wp-darwin-amd64:
+	# Force build; don't let existing versions interfere.
+	rm -f $(BIN_NAME)
+	GOOS=darwin GOARCH=amd64 $(MAKE) $(BIN_NAME)
+	mkdir -p $$(dirname "$@")
+	mv $(BIN_NAME) $@
+
 
 .PHONY: install isntall
 install isntall: $(BIN_NAME)
