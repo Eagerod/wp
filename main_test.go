@@ -14,16 +14,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const binPath string = "build/wp"
+
 func TestHelpExecutes(t *testing.T) {
-	_, err := exec.LookPath("wp")
+	cmd := exec.Command(binPath, "--help")
+
+	_, err := cmd.CombinedOutput()
 	assert.NoError(t, err)
 
-	cmd := exec.Command("wp", "--help")
-
-	_, err = cmd.CombinedOutput()
-	assert.NoError(t, err)
-
-	cmd = exec.Command("wp", "extract", "--help")
+	cmd = exec.Command(binPath, "extract", "--help")
 
 	_, err = cmd.CombinedOutput()
 	assert.NoError(t, err)
@@ -37,7 +36,7 @@ func TestExtractOneImage(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
-	cmd := exec.Command("wp", "extract", "128x128", tempDir, sourceImage)
+	cmd := exec.Command(binPath, "extract", "128x128", tempDir, sourceImage)
 
 	output, err := cmd.CombinedOutput()
 	assert.NoError(t, err)
@@ -71,7 +70,7 @@ func TestExtractOneImageDimensionError(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
-	cmd := exec.Command("wp", "extract", "1024x1024", tempDir, sourceImage)
+	cmd := exec.Command(binPath, "extract", "1024x1024", tempDir, sourceImage)
 
 	err = cmd.Start()
 	assert.NoError(t, err)
@@ -89,7 +88,7 @@ func TestExtractMultipleImages(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
-	cmd := exec.Command("wp", "extract", "128x128", tempDir, sourceImage1, sourceImage2)
+	cmd := exec.Command(binPath, "extract", "128x128", tempDir, sourceImage1, sourceImage2)
 
 	output, err := cmd.CombinedOutput()
 	assert.NoError(t, err)
@@ -135,7 +134,7 @@ func TestExtractMultipleImages(t *testing.T) {
 //   in the current working directory lead to the image being removed.
 func TestExtractFromThisDirectory(t *testing.T) {
 	cwd, _ := os.Getwd()
-		
+
 	originalImage, _ := filepath.Abs(path.Join(cwd, "test_images", "square.jpg"))
 	sourceImage, _ := filepath.Abs(path.Join(cwd, "square.jpg"))
 
@@ -154,7 +153,7 @@ func TestExtractFromThisDirectory(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
-	cmd := exec.Command("wp", "extract", "128x128", tempDir, sourceImage)
+	cmd := exec.Command(binPath, "extract", "128x128", tempDir, sourceImage)
 
 	output, err := cmd.CombinedOutput()
 	assert.NoError(t, err)
@@ -193,7 +192,7 @@ func TestPickImage(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
-	cmd := exec.Command("wp", "pick", "128x128", tempDir, "north", sourceImage)
+	cmd := exec.Command(binPath, "pick", "128x128", tempDir, "north", sourceImage)
 
 	output, err := cmd.CombinedOutput()
 	assert.NoError(t, err)
@@ -219,7 +218,7 @@ func TestPickMultipleImages(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
-	cmd := exec.Command("wp", "pick", "128x128", tempDir, "north", sourceImage1, sourceImage2)
+	cmd := exec.Command(binPath, "pick", "128x128", tempDir, "north", sourceImage1, sourceImage2)
 
 	output, err := cmd.CombinedOutput()
 	assert.NoError(t, err)
@@ -251,7 +250,7 @@ func TestPickImageScaled(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
-	cmd := exec.Command("wp", "pick", "128x128", tempDir, "north", "--scaled", sourceImage)
+	cmd := exec.Command(binPath, "pick", "128x128", tempDir, "north", "--scaled", sourceImage)
 
 	output, err := cmd.CombinedOutput()
 	assert.NoError(t, err)
@@ -273,7 +272,7 @@ func TestPickImageScaled(t *testing.T) {
 //   in the current working directory lead to the image being removed.
 func TestPickFromThisDirectory(t *testing.T) {
 	cwd, _ := os.Getwd()
-		
+
 	originalImage, _ := filepath.Abs(path.Join(cwd, "test_images", "square.jpg"))
 	sourceImage, _ := filepath.Abs(path.Join(cwd, "square.jpg"))
 
@@ -292,7 +291,7 @@ func TestPickFromThisDirectory(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
-	cmd := exec.Command("wp", "pick", "128x128", tempDir, "north", sourceImage)
+	cmd := exec.Command(binPath, "pick", "128x128", tempDir, "north", sourceImage)
 
 	output, err := cmd.CombinedOutput()
 	assert.NoError(t, err)

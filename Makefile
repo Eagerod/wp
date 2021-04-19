@@ -33,21 +33,13 @@ install: $(BIN_NAME)
 	cp $(BIN_NAME) /usr/local/bin/$(EXECUTABLE)
 
 .PHONY: test
-test: $(TEST_IMAGES)
+test: $(TEST_IMAGES) $(AUTOGEN_VERSION_FILENAME) $(BIN_NAME)
 	@if [ -z $$T ]; then \
-		$(GO) test -v $(PACKAGE_PATHS); \
+		$(GO) test -v ./...; \
 	else \
-		$(GO) test -v $(PACKAGE_PATHS) -run $$T; \
+		$(GO) test -v ./... -run $$T; \
 	fi
 
-.PHONY: system-test
-system-test: install $(TEST_IMAGES)
-	@if [ -z $$T ]; then \
-		$(GO) test -v main_test.go; \
-	else \
-		$(GO) test -v main_test.go -run $$T; \
-	fi
-	
 
 .PHONY: test-cover
 test-cover:
