@@ -74,8 +74,7 @@ $(TEST_IMAGES_DIR)/tall.jpg:
 
 .PHONY: fmt
 fmt:
-	@$(GO) fmt .
-	@$(GO) fmt $(WP_PACKAGE_DIR)
+	@$(GO) fmt ./...
 
 .PHONY: clean
 clean:
