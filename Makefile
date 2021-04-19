@@ -20,6 +20,8 @@ TEST_IMAGES := \
 	$(TEST_IMAGES_DIR)/wide.jpg \
 	$(TEST_IMAGES_DIR)/tall.jpg
 
+COVERAGE_FILE=coverage.out
+
 
 .PHONY: all
 all: $(BIN_NAME)
@@ -41,13 +43,12 @@ test: $(TEST_IMAGES) $(AUTOGEN_VERSION_FILENAME) $(BIN_NAME)
 	fi
 
 
-.PHONY: test-cover
-test-cover:
-	$(GO) test -v --coverprofile=coverage.out $(PACKAGE_PATHS)
+$(COVERAGE_FILE): $(TEST_IMAGES) $(AUTOGEN_VERSION_FILENAME) $(BIN_NAME)
+	$(GO) test -v --coverprofile=$(COVERAGE_FILE) ./...
 
 .PHONY: coverage
-coverage: test-cover
-	$(GO) tool cover -func=coverage.out
+coverage: $(COVERAGE_FILE)
+	$(GO) tool cover -func=$(COVERAGE_FILE)
 
 .INTERMEDIATE: $(AUTOGEN_VERSION_FILENAME)
 $(AUTOGEN_VERSION_FILENAME):
@@ -57,8 +58,8 @@ $(AUTOGEN_VERSION_FILENAME):
 	printf "package cmd\n\nconst VersionBuild = \"%s%s%s\"" $$version $$build $$dirty > $@
 
 .PHONY: pretty-coverage
-pretty-coverage: test-cover
-	$(GO) tool cover -html=coverage.out
+pretty-coverage: $(COVERAGE_FILE)
+	$(GO) tool cover -html=$(COVERAGE_FILE)
 
 $(TEST_IMAGES_DIR)/square.jpg:
 	mkdir -p $(TEST_IMAGES_DIR)
@@ -78,4 +79,4 @@ fmt:
 
 .PHONY: clean
 clean:
-	rm -rf coverage.out $(BUILD_DIR) $(TEST_IMAGES_DIR)
+	rm -rf $(COVERAGE_FILE) $(BUILD_DIR) $(TEST_IMAGES_DIR)
