@@ -18,6 +18,15 @@ type ImageSource struct {
 	deleteParentDir bool
 }
 
+func (is *ImageSource) SourcePathIsLocal() (bool, error) {
+	pathUrl, err := url.Parse(is.SourcePath)
+	if err != nil {
+		return false, err
+	}
+
+	return pathUrl.Scheme == "" || pathUrl.Scheme == "file", nil
+}
+
 // Get the local image path from a given source image.
 // This path will be a relative path that can be put anywhere needed.
 func (is *ImageSource) GetImagePath() (string, error) {
@@ -63,14 +72,33 @@ func PrepareImageFromSource(sourcePath string, cacheDir string) (*ImageSource, e
 	// If the SourcePath is rooted in the cache directory, bail early, because
 	//   there's nothing interesting to do, and trying to use any kind of
 	//   recaching logic will just duplicate the image in the cache directory.
-	if cacheDir != "" && strings.HasPrefix(is.SourcePath, cacheDir) {
-		if _, err := os.Stat(is.SourcePath); err != nil {
+	if cacheDir != "" {
+		isLocal, err := is.SourcePathIsLocal()
+		if err != nil {
 			return nil, err
 		}
 
-		is.LocalPath = is.SourcePath
-		is.deleteParentDir = false
-		return &is, nil
+		if isLocal {
+			absSource, err := filepath.Abs(is.SourcePath)
+			if err != nil {
+				return nil, err
+			}
+
+			absCache, err := filepath.Abs(cacheDir)
+			if err != nil {
+				return nil, err
+			}
+
+			if strings.HasPrefix(absSource, absCache) {
+				if _, err := os.Stat(is.SourcePath); err != nil {
+					return nil, err
+				}
+
+				is.LocalPath = is.SourcePath
+				is.deleteParentDir = false
+				return &is, nil
+			}
+		}
 	}
 
 	var outputDir string
